@@ -23,20 +23,14 @@ package rapture.data
 import scala.annotation._
 import language.higherKinds
 
-object DataGetException {
-  def stringifyPath(path: Vector[Either[Int, String]]) = path.reverse map {
-    case Left(i) => s"($i)"
-    case Right(s) => s".$s"
-  } mkString ""
+@implicitNotFound("cannot serialize type ${V}.")
+trait Wrapper[-V] {
+  def wrap(t: V): Any
 }
 
-sealed class DataGetException(msg: String) extends RuntimeException(msg)
-
-case class TypeMismatchException(foundType: DataTypes.DataType,
-    expectedType: DataTypes.DataType, path: Vector[Either[Int, String]]) extends
-    DataGetException(s"Type mismatch: Expected ${expectedType.name} but found "+
-    s"${foundType.name} at <value>${DataGetException.stringifyPath(path)}")
-
-case class MissingValueException(path: Vector[Either[Int, String]])
-  extends DataGetException(s"Missing value: <value>${DataGetException.stringifyPath(path)}")
+@implicitNotFound("cannot extract type ${V}.")
+trait Unwrapper[+V, -Type] {
+  def unwrap(any: Type): V
+  def errorToNull = false
+}
 

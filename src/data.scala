@@ -52,6 +52,10 @@ trait DataCompanion[+Type <: DataType[Type, ParserType], ParserType[S] <: DataPa
   
 }
 
+object DataType {
+  type ByType[+T <: DataType.ByType[T]] = DataType[T, P] forSome { type P[S] <: DataParser[S] }
+}
+
 trait DataType[+T <: DataType[T, ParserType], ParserType[S] <: DataParser[S]] extends Dynamic {
   def companion: DataCompanion[T, ParserType]
   protected def root: Array[Any]
@@ -82,7 +86,7 @@ trait DataType[+T <: DataType[T, ParserType], ParserType[S] <: DataParser[S]] ex
     case _ => false
   }
 
-  def as[T](implicit ext: Extractor[T], eh: ExceptionHandler): eh.![T, DataGetException]
+  def as[V](implicit unwrapper: Unwrapper[V, T], eh: ExceptionHandler): eh.![V, DataGetException]
   
   override def hashCode = root(0).hashCode & "json".hashCode
 
