@@ -60,7 +60,7 @@ case class DPath(path: List[String]) extends Dynamic {
 }
 
 trait DataType[+T <: DataType[T, RepresentationType], +RepresentationType <: DataRepresentation] extends Dynamic {
-  protected def root: Array[Any]
+  def root: Array[Any]
   implicit def representation: RepresentationType
   def path: Vector[Either[Int, String]]
   protected def normalize = doNormalize(false)

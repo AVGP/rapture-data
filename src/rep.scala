@@ -36,6 +36,7 @@ object DataTypes {
   case object Undefined extends DataType("undefined")
 }
 
+@implicitNotFound(msg = "Cannot find ${Representation} parser for values of type ${Source}")
 trait Parser[-Source, Representation <: DataRepresentation] {
   val representation: Representation
   def parse(s: Source): Option[Any]

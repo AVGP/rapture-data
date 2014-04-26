@@ -52,7 +52,7 @@ object Extractor {
   implicit def genSeqExtractor[T, Coll[_], Data <: DataType[Data, R] forSome { type R <:
       DataRepresentation }](implicit cbf: scala.collection.generic.CanBuildFrom[Nothing, T,
       Coll[T]], ext: Extractor[T, Data]): Extractor[Coll[T], Data] =
-    BasicExtractor[Coll[T], Data]({ x => println("x = "+x+";root(0) = "+x.root(0)); x.representation.getArray(x.root(0)).to[List].map({v => println("v = "+v);
+    BasicExtractor[Coll[T], Data]({ x => x.representation.getArray(x.root(0)).to[List].map({v =>
         ext.construct(x.wrap(v)) }).to[Coll] })
 
   implicit def optionExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataRepresentation }]
