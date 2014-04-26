@@ -31,10 +31,10 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst](compani
       val expressions = exprs.iterator
       sb.append(textParts.next())
       while(textParts.hasNext) {
-        sb.append(companion.constructRaw(VCell(expressions.next.value), Vector())(parser.ast).toString)
+        sb.append(companion.construct(VCell(expressions.next.value), Vector())(parser.ast).toString)
         sb.append(textParts.next)
       }
-      companion.constructRaw(VCell(parser.parse(sb.toString).get), Vector())(parser.ast)
+      companion.construct(VCell(parser.parse(sb.toString).get), Vector())(parser.ast)
     }
 
   def unapplySeq[D <: DataType[D, DataAst]](data: D): Option[Seq[DataType[D, DataAst]]] = try {
@@ -42,27 +42,41 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst](compani
     val PlaceholderNumber = (placeholder+"([0-9]+)"+placeholder).r
     val next = new Counter(0)
     val txt = sc.parts.reduceLeft(_ + s""""${placeholder}${next()}${placeholder}" """ + _)
+    
+    println("txt = "+txt)
+    println("parser.parse(txt) = "+parser.parse(txt))
+
     val paths: Array[Vector[String]] =
       Array.fill[Vector[String]](sc.parts.length - 1)(Vector())
     
     def extract(any: Any, path: Vector[String]): Unit = {
+      println("Extracting "+any+" at "+path)
       if(parser.ast.isScalar(any)) {
+        println("isScalar")
+        println("data.extract "+data.extract(path).as[Any](?, raw))
+        println("ast.getScalar = "+parser.ast.getScalar(any))
         if(data.extract(path).as[Any](?, raw) !=
             parser.ast.getScalar(any)) throw new Exception("Value doesn't match")
       } else if(parser.ast.isObject(any)) {
+        println("isObject")
         parser.ast.getObject(any) foreach { case (k, v) =>
-          if(parser.ast.isString(v)) parser.ast.getString(v) match {
-            case Some(PlaceholderNumber(n)) =>
+          println("getting object: "+v+": "+v.getClass)
+          if(parser.ast.isString(v)) { println("isString"); parser.ast.getString(v) match {
+            case PlaceholderNumber(n) =>
+              println("matched "+n)
               paths(n.toInt) = path :+ k
             case _ => extract(v, path :+ k)
-          } else extract(v, path :+ k)
+          } } else extract(v, path :+ k)
         }
       } else throw new Exception("Can't match on arrays.")
     }
 
     extract(parser.parse(txt).get, Vector())
 
+    println("paths = "+paths)
+
     val extracts = paths.map(data.extract)
+    println("extracts = "+extracts)
     if(extracts.exists(_.$root.value == null)) None
     else Some(extracts)
   } catch { case e: Exception => None }

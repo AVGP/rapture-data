@@ -33,22 +33,22 @@ object DataCompanion { object Empty }
 trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def empty(implicit ast: AstType) =
-    constructRaw(VCell(ast.fromObject(Map())), Vector())
+    construct(VCell(ast.fromObject(Map())), Vector())
 
-  def constructRaw(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
+  def construct(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
 
   def parse[Source, R <: AstType](s: Source)(implicit eh: ExceptionHandler,
       parser: Parser[Source, R]): eh.![Type, ParseException] = eh.wrap {
-    constructRaw(try VCell(parser.parse(s).get) catch {
+    construct(try VCell(parser.parse(s).get) catch {
       case e: NoSuchElementException => throw new ParseException(s.toString)
     }, Vector())(parser.ast)
   }
 
   def apply[T: Serializer](t: T)(implicit ast: AstType): Type =
-    constructRaw(VCell(?[Serializer[T]].serialize(t)), Vector())
+    construct(VCell(?[Serializer[T]].serialize(t)), Vector())
 
   def unapply(value: Any)(implicit ast: AstType): Option[Type] =
-    Some(constructRaw(VCell(value), Vector()))
+    Some(construct(VCell(value), Vector()))
 
   def format(value: Option[Any], ln: Int, ast: AstType, pad: String,
       brk: String): String
@@ -104,14 +104,12 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
 
   def serialize: String
 
-  def apply(i: Int): T = $deref(Left(i) +: $path)
-  def apply(): T = $deref(Left(0) +: $path)
+  def apply(i: Int = 0): T = $deref(Left(i) +: $path)
 
-  def applyDynamic(key: String)(i: Int): T = selectDynamic(key).apply(i)
-  def applyDynamic(key: String)(): T = selectDynamic(key).apply(0)
+  def applyDynamic(key: String)(i: Int = 0): T = selectDynamic(key).apply(i)
 
   override def equals(any: Any) = any match {
-    case any: DataType[_, _] => $root.value == any.$root.value
+    case any: DataType[_, _] => $normalize == any.$normalize
     case _ => false
   }
 
