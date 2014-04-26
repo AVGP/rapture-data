@@ -63,7 +63,7 @@ class DataContext[+Data <: DataType[Data, DataRepresentation], -RepresentationTy
     extract(parser.parse(txt).get, Vector())
 
     val extracts = paths.map(data.extract)
-    if(extracts.exists(_.root(0) == null)) None
+    if(extracts.exists(_.$root(0) == null)) None
     else Some(extracts)
   } catch { case e: Exception => None }
 }

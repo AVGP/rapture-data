@@ -60,60 +60,60 @@ case class DPath(path: List[String]) extends Dynamic {
 }
 
 trait DataType[+T <: DataType[T, RepresentationType], +RepresentationType <: DataRepresentation] extends Dynamic {
-  def root: Array[Any]
-  implicit def representation: RepresentationType
-  def path: Vector[Either[Int, String]]
-  protected def normalize = doNormalize(false)
+  def $root: Array[Any]
+  implicit def $representation: RepresentationType
+  def $path: Vector[Either[Int, String]]
+  def $normalize = doNormalize(false)
+  def $acessInnerMap(k: String): Any = $representation.dereferenceObject($root(0), k)
+  def $wrap(any: Any, $path: Vector[Either[Int, String]] = Vector()): T
 
   protected def doNormalize(orEmpty: Boolean): Any =
     yCombinator[(Any, Vector[Either[Int, String]]), Any] { fn => _ match {
       case (j, Vector()) => j: Any
       case (j, t :+ e) =>
         fn(({
-          if(e.map(x => representation.isArray(j), x => representation.isObject(j))) {
-            try e.map(representation.dereferenceArray(j, _), representation.dereferenceObject(j, _)) catch {
+          if(e.map(x => $representation.isArray(j), x => $representation.isObject(j))) {
+            try e.map($representation.dereferenceArray(j, _), $representation.dereferenceObject(j, _)) catch {
               case TypeMismatchException(f, e, _) =>
-                TypeMismatchException(f, e, path.drop(t.length))
+                TypeMismatchException(f, e, $path.drop(t.length))
               case e: Exception =>
                 if(orEmpty) DataCompanion.Empty
-                else throw MissingValueException(path.drop(t.length))
+                else throw MissingValueException($path.drop(t.length))
             }
           } else throw TypeMismatchException(
-            if(representation.isArray(j)) DataTypes.Array else DataTypes.Object,
+            if($representation.isArray(j)) DataTypes.Array else DataTypes.Object,
                 e.map(l => DataTypes.Array, r => DataTypes.Object),
-            path.drop(t.length)
+            $path.drop(t.length)
           )
         }, t))
-    } } (root(0) -> path)
+    } } ($root(0) -> $path)
 
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
   def as[S](implicit ext: Extractor[S, T], eh: ExceptionHandler): eh.![S, DataGetException] =
     eh wrap {
-      try ext.construct(wrap(normalize)) catch {
-        case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, path)
+      try ext.construct($wrap($normalize)) catch {
+        case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
         case e: MissingValueException => throw e
       }
     }
-
-  def wrap(any: Any, path: Vector[Either[Int, String]] = Vector()): T
 
   def format: String
 
   def serialize: String
 
-  def apply(i: Int): T = wrap(root(0), Left(i) +: path)
+  def apply(i: Int): T = $wrap($root(0), Left(i) +: $path)
 
   def applyDynamic(key: String)(i: Int): T = selectDynamic(key).apply(i)
 
   override def equals(any: Any) = any match {
-    case any: DataType[_, _] => root(0) == any.root(0)
+    case any: DataType[_, _] => $root(0) == any.$root(0)
     case _ => false
   }
 
-  override def hashCode = root(0).hashCode & "json".hashCode
+  override def hashCode = $root(0).hashCode & "json".hashCode
 
   /** Assumes the Json object wraps a `Map`, and extracts the element `key`. */
-  def selectDynamic(key: String): T = wrap(root(0), Right(key) +: path)
+  def selectDynamic(key: String): T = $wrap($root(0), Right(key) +: $path)
 
   def extract(sp: Vector[String]): DataType[T, RepresentationType] =
     if(sp.isEmpty) this else selectDynamic(sp.head).extract(sp.tail)
@@ -124,65 +124,65 @@ trait DataType[+T <: DataType[T, RepresentationType], +RepresentationType <: Dat
 
   def ++[S <: DataType[S, Rep] forSome { type Rep }](b: S): T = {
     def merge(a: Any, b: Any): Any = {
-      if(representation.isObject(b)) {
-        if(representation.isObject(a)) {
-          representation.fromObject(representation.getKeys(b).foldLeft(representation.getObject(a)) { case (as, k) =>
+      if($representation.isObject(b)) {
+        if($representation.isObject(a)) {
+          $representation.fromObject($representation.getKeys(b).foldLeft($representation.getObject(a)) { case (as, k) =>
             as + (k -> {
-              if(as contains k) merge(as(k), representation.dereferenceObject(b, k))
-              else representation.dereferenceObject(b, k)
+              if(as contains k) merge(as(k), $representation.dereferenceObject(b, k))
+              else $representation.dereferenceObject(b, k)
             })
           })
         } else b
-      } else if(representation.isArray(b)) {
-        if(representation.isArray(a)) representation.fromArray(representation.getArray(a) ++ representation.getArray(b))
+      } else if($representation.isArray(b)) {
+        if($representation.isArray(a)) $representation.fromArray($representation.getArray(a) ++ $representation.getArray(b))
         else b
       } else b
     }
-    wrap(merge(normalize, b.root(0)), Vector())
+    $wrap(merge($normalize, b.$root(0)), Vector())
   }
 
   def +(pv: (DPath => DPath, ForcedConversion)) = {
     def add(path: List[String], v: Any): Any = path match {
       case Nil => v
-      case next :: list => representation.fromObject(Map(next -> add(list, v)))
+      case next :: list => $representation.fromObject(Map(next -> add(list, v)))
     }
-    this ++ wrap(add(pv._1(DPath(Nil)).path.reverse, pv._2.value), Vector())
+    this ++ $wrap(add(pv._1(DPath(Nil)).path.reverse, pv._2.value), Vector())
   }
 }
 
 trait MutableDataType[+T <: DataType[T, RepresentationType], RepresentationType <: MutableDataRepresentation]
     extends DataType[T, RepresentationType] {
 
-  def setRoot(value: Any): Unit
+  def $setRoot(value: Any): Unit
 
-  def updateParents(p: Vector[Either[Int, String]], newVal: Any): Unit = p match {
+  def $updateParents(p: Vector[Either[Int, String]], newVal: Any): Unit = p match {
     case Vector() =>
-      setRoot(newVal)
+      $setRoot(newVal)
     case Left(idx) +: init =>
-      val jb = wrap(root(0), init)
-      updateParents(init, representation.setArrayValue(Try(jb.normalize).getOrElse(Nil), idx, newVal))
+      val jb = $wrap($root(0), init)
+      $updateParents(init, $representation.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal))
     case Right(key) +: init =>
-      val jb = wrap(root(0), init)
-      updateParents(init, representation.setObjectValue(Try(jb.normalize).getOrElse(Map()), key, newVal))
+      val jb = $wrap($root(0), init)
+      $updateParents(init, $representation.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key, newVal))
   }
 
   /** Updates the element `key` of the JSON object with the value `v` */
   def updateDynamic(key: String)(v: ForcedConversion): Unit =
-    updateParents(path, representation.setObjectValue(Try(normalize).getOrElse(Map()), key, v.value))
+    $updateParents($path, $representation.setObjectValue(Try($normalize).getOrElse(Map()), key, v.value))
 
   /** Updates the `i`th element of the JSON array with the value `v` */
   def update[T: Serializer](i: Int, v: T): Unit =
-    updateParents(path, representation.setArrayValue(Try(normalize).getOrElse(Nil), i,
+    $updateParents($path, $representation.setArrayValue(Try($normalize).getOrElse(Nil), i,
         ?[Serializer[T]].serialize(v)))
 
   /** Removes the specified key from the JSON object */
-  def -=(k: String): Unit = updateParents(path, representation.removeObjectValue(doNormalize(true), k))
+  def -=(k: String): Unit = $updateParents($path, $representation.removeObjectValue(doNormalize(true), k))
 
   /** Adds the specified value to the JSON array */
   def +=[T: Serializer](v: T): Unit = {
     val r = doNormalize(true)
-    val insert = if(r == DataCompanion.Empty) representation.fromArray(Nil) else r
-    updateParents(path, representation.addArrayValue(insert, ?[Serializer[T]].serialize(v)))
+    val insert = if(r == DataCompanion.Empty) $representation.fromArray(Nil) else r
+    $updateParents($path, $representation.addArrayValue(insert, ?[Serializer[T]].serialize(v)))
   }
 
 }

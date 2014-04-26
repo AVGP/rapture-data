@@ -42,7 +42,6 @@ object Macros {
     val params = weakTypeOf[T].declarations collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
-
       val paramValue = c.Expr[Any](Apply(
         Select(
           Ident(newTermName("data")),
@@ -65,7 +64,7 @@ object Macros {
         ),
         List(Select(
           Ident(newTermName("data")),
-          newTermName("representation")
+          newTermName("$representation")
         ))
       )
 

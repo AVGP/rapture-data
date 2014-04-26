@@ -46,24 +46,24 @@ object Extractor {
     ext.map(_.toInt.toByte)
 
   implicit def anyExtractor[Data <: DataType[_, DataRepresentation]]: Extractor[Any, Data] =
-    BasicExtractor[Any, Data](_.root(0))
+    BasicExtractor[Any, Data](_.$root(0))
 
   
   implicit def genSeqExtractor[T, Coll[_], Data <: DataType[Data, R] forSome { type R <:
       DataRepresentation }](implicit cbf: scala.collection.generic.CanBuildFrom[Nothing, T,
       Coll[T]], ext: Extractor[T, Data]): Extractor[Coll[T], Data] =
-    BasicExtractor[Coll[T], Data]({ x => x.representation.getArray(x.root(0)).to[List].map({v =>
-        ext.construct(x.wrap(v)) }).to[Coll] })
+    BasicExtractor[Coll[T], Data]({ x => x.$representation.getArray(x.$root(0)).to[List].map({v =>
+        ext.construct(x.$wrap(v)) }).to[Coll] })
 
   implicit def optionExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataRepresentation }]
       (implicit ext: Extractor[T, Data]): Extractor[Option[T], Data] =
-    new BasicExtractor[Option[T], Data](x => try Some(x.root(0): Any) map (v =>
-        ext.construct(x.wrap(v))) catch { case e: Exception => None })
+    new BasicExtractor[Option[T], Data](x => try Some(x.$root(0): Any) map (v =>
+        ext.construct(x.$wrap(v))) catch { case e: Exception => None })
 
   implicit def mapExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataRepresentation }]
       (implicit ext: Extractor[T, Data]): Extractor[Map[String, T], Data] =
-    BasicExtractor[Map[String, T], Data](x => x.representation.getObject(x.root(0)) mapValues {
-        v => ext.construct(x.wrap(v)) })
+    BasicExtractor[Map[String, T], Data](x => x.$representation.getObject(x.$root(0)) mapValues {
+        v => ext.construct(x.$wrap(v)) })
 }
 
 @implicitNotFound("cannot extract type ${T} from ${D}.")

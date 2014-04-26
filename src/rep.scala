@@ -37,7 +37,7 @@ object DataTypes {
 }
 
 @implicitNotFound(msg = "Cannot find ${Representation} parser for values of type ${Source}")
-trait Parser[-Source, Representation <: DataRepresentation] {
+trait Parser[-Source, +Representation <: DataRepresentation] {
   val representation: Representation
   def parse(s: Source): Option[Any]
 }
