@@ -22,7 +22,7 @@ package rapture.data
 
 import rapture.core._
 
-class DataContext[+Data <: DataType[Data, DataRepresentation], -RepresentationType <: DataRepresentation](companion: DataCompanion[Data, RepresentationType], sc: StringContext, parser: Parser[String, RepresentationType]) {
+class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst](companion: DataCompanion[Data, AstType], sc: StringContext, parser: Parser[String, AstType]) {
 
   def apply(exprs: ForcedConversion*)(implicit eh: ExceptionHandler): eh.![Data, ParseException] =
     eh.wrap {
@@ -31,13 +31,13 @@ class DataContext[+Data <: DataType[Data, DataRepresentation], -RepresentationTy
       val expressions = exprs.iterator
       sb.append(textParts.next())
       while(textParts.hasNext) {
-        sb.append(companion.constructRaw(Array(expressions.next.value), Vector())(parser.representation).toString)
+        sb.append(companion.constructRaw(VCell(expressions.next.value), Vector())(parser.ast).toString)
         sb.append(textParts.next)
       }
-      companion.constructRaw(Array(parser.parse(sb.toString).get), Vector())(parser.representation)
+      companion.constructRaw(VCell(parser.parse(sb.toString).get), Vector())(parser.ast)
     }
 
-  def unapplySeq[D <: DataType[D, DataRepresentation]](data: D): Option[Seq[DataType[D, DataRepresentation]]] = try {
+  def unapplySeq[D <: DataType[D, DataAst]](data: D): Option[Seq[DataType[D, DataAst]]] = try {
     val placeholder = Utils.uniqueNonSubstring(sc.parts.mkString)
     val PlaceholderNumber = (placeholder+"([0-9]+)"+placeholder).r
     val next = new Counter(0)
@@ -46,12 +46,12 @@ class DataContext[+Data <: DataType[Data, DataRepresentation], -RepresentationTy
       Array.fill[Vector[String]](sc.parts.length - 1)(Vector())
     
     def extract(any: Any, path: Vector[String]): Unit = {
-      if(parser.representation.isScalar(any)) {
+      if(parser.ast.isScalar(any)) {
         if(data.extract(path).as[Any](?, raw) !=
-            parser.representation.getScalar(any)) throw new Exception("Value doesn't match")
-      } else if(parser.representation.isObject(any)) {
-        parser.representation.getObject(any) foreach { case (k, v) =>
-          if(parser.representation.isString(v)) parser.representation.getString(v) match {
+            parser.ast.getScalar(any)) throw new Exception("Value doesn't match")
+      } else if(parser.ast.isObject(any)) {
+        parser.ast.getObject(any) foreach { case (k, v) =>
+          if(parser.ast.isString(v)) parser.ast.getString(v) match {
             case Some(PlaceholderNumber(n)) =>
               paths(n.toInt) = path :+ k
             case _ => extract(v, path :+ k)
@@ -63,7 +63,7 @@ class DataContext[+Data <: DataType[Data, DataRepresentation], -RepresentationTy
     extract(parser.parse(txt).get, Vector())
 
     val extracts = paths.map(data.extract)
-    if(extracts.exists(_.$root(0) == null)) None
+    if(extracts.exists(_.$root.value == null)) None
     else Some(extracts)
   } catch { case e: Exception => None }
 }

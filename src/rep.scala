@@ -36,13 +36,13 @@ object DataTypes {
   case object Undefined extends DataType("undefined")
 }
 
-@implicitNotFound(msg = "Cannot find ${Representation} parser for values of type ${Source}")
-trait Parser[-Source, +Representation <: DataRepresentation] {
-  val representation: Representation
+@implicitNotFound(msg = "Cannot find ${Ast} parser for values of type ${Source}")
+trait Parser[-Source, +Ast <: DataAst] {
+  val ast: Ast
   def parse(s: Source): Option[Any]
 }
 
-trait DataRepresentation {
+trait DataAst {
   
   /** Dereferences the named element within the JSON object. */
   def dereferenceObject(obj: Any, element: String): Any =
@@ -79,7 +79,7 @@ trait DataRepresentation {
   def isString(any: Any): Boolean
 }
 
-trait MutableDataRepresentation extends DataRepresentation {
+trait MutableDataAst extends DataAst {
   def setObjectValue(obj: Any, name: String, value: Any): Any
   def setArrayValue(array: Any, index: Int, value: Any): Any
   def removeObjectValue(obj: Any, name: String): Any

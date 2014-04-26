@@ -50,7 +50,7 @@ object Macros {
         List(Literal(Constant(p.name.toString)))
       ))
 
-      val newArray = reify(Array(paramValue.splice))
+      val newArray = reify(VCell(paramValue.splice))
       
       val newDataArray = Apply(
         Apply(
@@ -64,7 +64,7 @@ object Macros {
         ),
         List(Select(
           Ident(newTermName("data")),
-          newTermName("$representation")
+          newTermName("$ast")
         ))
       )
 
@@ -94,7 +94,7 @@ object Macros {
     reify(new Extractor[T, Data] { def construct(data: Data): T = construction.splice })
   }
 
-  def serializerMacro[T: c.WeakTypeTag](c: Context)(representation: c.Expr[DataRepresentation]): c.Expr[Serializer[T]] = {
+  def serializerMacro[T: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]): c.Expr[Serializer[T]] = {
     import c.universe._
 
     val tpe = weakTypeOf[T].typeSymbol.asClass
@@ -174,6 +174,6 @@ object Macros {
       )
     } else throw new Exception()
 
-    reify(new Serializer[T] { def serialize(t: T): Any = representation.splice.fromObject(construction.splice) })
+    reify(new Serializer[T] { def serialize(t: T): Any = ast.splice.fromObject(construction.splice) })
   }
 }
