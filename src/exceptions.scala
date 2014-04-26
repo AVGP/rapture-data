@@ -1,5 +1,5 @@
 /**********************************************************************************************\
-* Rapture Data Library                                                                         *
+* Rapture JSON Library                                                                         *
 * Version 0.9.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
@@ -20,9 +20,6 @@
 \**********************************************************************************************/
 package rapture.data
 
-import scala.annotation._
-import language.higherKinds
-
 object DataGetException {
   def stringifyPath(path: Vector[Either[Int, String]]) = path.reverse map {
     case Left(i) => s"($i)"
@@ -39,4 +36,5 @@ case class TypeMismatchException(foundType: DataTypes.DataType,
 
 case class MissingValueException(path: Vector[Either[Int, String]])
   extends DataGetException(s"Missing value: <value>${DataGetException.stringifyPath(path)}")
+
 

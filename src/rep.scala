@@ -1,5 +1,5 @@
 /**********************************************************************************************\
-* Rapture Data Library                                                                         *
+* Rapture JSON Library                                                                         *
 * Version 0.9.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
@@ -36,18 +36,22 @@ object DataTypes {
   case object Undefined extends DataType("undefined")
 }
 
-trait DataParser[-Source] {
+trait Parser[-Source, Representation <: DataRepresentation] {
+  val representation: Representation
   def parse(s: Source): Option[Any]
+}
+
+trait DataRepresentation {
   
-  /** Dereferences the named element within the data object. */
+  /** Dereferences the named element within the JSON object. */
   def dereferenceObject(obj: Any, element: String): Any =
     getObject(obj)(element)
   
-  /** Returns at `Iterator[String]` over the names of the elements in the data object. */
+  /** Returns at `Iterator[String]` over the names of the elements in the JSON object. */
   def getKeys(obj: Any): Iterator[String] =
     getObject(obj).keys.iterator
  
-  /** Gets the indexed element from the parsed data array. */
+  /** Gets the indexed element from the parsed JSON array. */
   def dereferenceArray(array: Any, element: Int): Any =
     getArray(array)(element)
   
@@ -57,21 +61,27 @@ trait DataParser[-Source] {
   /** Tests if the element represents an `Array` */
   def isArray(any: Any): Boolean
   
-  /** Extracts a data object as a `Map[String, Any]` from the parsed data. */
+  /** Extracts a JSON object as a `Map[String, Any]` from the parsed JSON. */
   def getObject(obj: Any): Map[String, Any]
 
   def fromObject(obj: Map[String, Any]): Any
 
-  /** Extracts a data array as a `Seq[Any]` from the parsed data. */
+  /** Extracts a JSON array as a `Seq[Any]` from the parsed JSON. */
   def getArray(array: Any): Seq[Any]
 
   def fromArray(array: Seq[Any]): Any
 
+  def getScalar(any: Any): Any
+  def isScalar(any: Any): Boolean
+  
+  def getString(any: Any): Any
+  def isString(any: Any): Boolean
 }
 
-trait MutableDataParser[-Source] extends DataParser[Source] {
+trait MutableDataRepresentation extends DataRepresentation {
   def setObjectValue(obj: Any, name: String, value: Any): Any
   def setArrayValue(array: Any, index: Int, value: Any): Any
   def removeObjectValue(obj: Any, name: String): Any
   def addArrayValue(array: Any, value: Any): Any
 }
+

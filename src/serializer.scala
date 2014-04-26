@@ -1,5 +1,5 @@
 /**********************************************************************************************\
-* Rapture Data Library                                                                         *
+* Rapture JSON Library                                                                         *
 * Version 0.9.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
@@ -20,17 +20,14 @@
 \**********************************************************************************************/
 package rapture.data
 
+import rapture.core._
+
+import scala.reflect.macros._
 import scala.annotation._
+
+import language.experimental.macros
 import language.higherKinds
 
-@implicitNotFound("cannot serialize type ${V}.")
-trait Wrapper[-V] {
-  def wrap(t: V): Any
-}
-
-@implicitNotFound("cannot extract type ${V}.")
-trait Unwrapper[+V, -Type] {
-  def unwrap(any: Type): V
-  def errorToNull = false
-}
+@implicitNotFound("Cannot serialize type ${T}. Please provide an implicit of type Serialiser[${T}].")
+trait Serializer[T] { def serialize(t: T): Any }
 
