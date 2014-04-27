@@ -65,6 +65,11 @@ trait DataAst {
   /** Extracts a JSON object as a `Map[String, Any]` from the parsed JSON. */
   def getObject(obj: Any): Map[String, Any]
 
+  def getChildren(obj: Any): Seq[Any] = {
+    val m = getObject(obj)
+    getKeys(obj).to[List] map m
+  }
+
   def fromObject(obj: Map[String, Any]): Any
 
   /** Extracts a JSON array as a `Seq[Any]` from the parsed JSON. */

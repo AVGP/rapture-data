@@ -50,7 +50,7 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
   def unapply(value: Any)(implicit ast: AstType): Option[Type] =
     Some(construct(VCell(value), Vector()))
 
-  def format(value: Option[Any], ln: Int, ast: AstType, pad: String,
+  def format(value: Any, ln: Int, ast: AstType, pad: String,
       brk: String): String
 
 }
