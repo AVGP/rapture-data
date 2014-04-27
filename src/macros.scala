@@ -71,7 +71,8 @@ object Macros {
       Apply(
         Select(
           c.Expr[Extractor[_, _]](
-            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])), false, false)
+            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
+                false, false)
           ).tree,
           newTermName("construct")
         ),
@@ -94,11 +95,11 @@ object Macros {
     reify(new Extractor[T, Data] { def construct(data: Data): T = construction.splice })
   }
 
-  def serializerMacro[T: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]): c.Expr[Serializer[T]] = {
+  def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]): c.Expr[Serializer[T, Data]] = {
     import c.universe._
 
     val tpe = weakTypeOf[T].typeSymbol.asClass
-    val serializer = typeOf[Serializer[_]].typeSymbol.asType.toTypeConstructor
+    val serializer = typeOf[Serializer[_, _]].typeSymbol.asType.toTypeConstructor
 
     val construction = if(tpe.isCaseClass) {
 
@@ -121,7 +122,8 @@ object Macros {
           List(
             Apply(
               Select(
-                c.inferImplicitValue(appliedType(serializer, List(p.returnType)), false, false),
+                c.inferImplicitValue(appliedType(serializer, List(p.returnType,
+                    weakTypeOf[Data])), false, false),
                 newTermName("serialize")
               ),
               List(
@@ -174,6 +176,6 @@ object Macros {
       )
     } else throw new Exception()
 
-    reify(new Serializer[T] { def serialize(t: T): Any = ast.splice.fromObject(construction.splice) })
+    reify(new Serializer[T, Data] { def serialize(t: T): Any = ast.splice.fromObject(construction.splice) })
   }
 }

@@ -29,5 +29,5 @@ import language.experimental.macros
 import language.higherKinds
 
 @implicitNotFound("Cannot serialize type ${T}. Please provide an implicit of type Serialiser[${T}].")
-trait Serializer[T] { def serialize(t: T): Any }
+trait Serializer[T, -D] { def serialize(t: T): Any }
 

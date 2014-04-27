@@ -24,7 +24,7 @@ import rapture.core._
 
 class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst](companion: DataCompanion[Data, AstType], sc: StringContext, parser: Parser[String, AstType]) {
 
-  def apply(exprs: ForcedConversion*)(implicit eh: ExceptionHandler): eh.![Data, ParseException] =
+  def apply(exprs: ForcedConversion[Data]*)(implicit eh: ExceptionHandler): eh.![Data, ParseException] =
     eh.wrap {
       val sb = new StringBuilder
       val textParts = sc.parts.iterator

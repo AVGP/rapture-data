@@ -44,8 +44,8 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
     }, Vector())(parser.ast)
   }
 
-  def apply[T: Serializer](t: T)(implicit ast: AstType): Type =
-    construct(VCell(?[Serializer[T]].serialize(t)), Vector())
+  def apply[T](t: T)(implicit ast: AstType, ser: Serializer[T, Type]): Type =
+    construct(VCell(ser.serialize(t)), Vector())
 
   def unapply(value: Any)(implicit ast: AstType): Option[Type] =
     Some(construct(VCell(value), Vector()))
@@ -144,7 +144,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
     $wrap(merge($normalize, b.$root.value), Vector())
   }
 
-  def +(pv: (DPath => DPath, ForcedConversion)) = {
+  def +(pv: (DPath => DPath, ForcedConversion[T])) = {
     def add(path: List[String], v: Any): Any = path match {
       case Nil => v
       case next :: list => $ast.fromObject(Map(next -> add(list, v)))
@@ -168,29 +168,28 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
   }
 
   /** Updates the element `key` of the JSON object with the value `v` */
-  def updateDynamic(key: String)(v: ForcedConversion): Unit =
+  def updateDynamic(key: String)(v: ForcedConversion[T]): Unit =
     $updateParents($path, $ast.setObjectValue(Try($normalize).getOrElse(Map()), key, v.value))
 
   /** Updates the `i`th element of the JSON array with the value `v` */
-  def update[T: Serializer](i: Int, v: T): Unit =
+  def update[T2](i: Int, v: T2)(implicit ser: Serializer[T2, T]): Unit =
     $updateParents($path, $ast.setArrayValue(Try($normalize).getOrElse(Nil), i,
-        ?[Serializer[T]].serialize(v)))
+        ser.serialize(v)))
 
   /** Removes the specified key from the JSON object */
   def -=(k: String): Unit = $updateParents($path, $ast.removeObjectValue(doNormalize(true), k))
 
   /** Adds the specified value to the JSON array */
-  def +=[T: Serializer](v: T): Unit = {
+  def +=[T2](v: T2)(implicit ser: Serializer[T2, T]): Unit = {
     val r = doNormalize(true)
     val insert = if(r == DataCompanion.Empty) $ast.fromArray(Nil) else r
-    $updateParents($path, $ast.addArrayValue(insert, ?[Serializer[T]].serialize(v)))
+    $updateParents($path, $ast.addArrayValue(insert, ser.serialize(v)))
   }
-
 }
 
 object ForcedConversion {
-  implicit def forceConversion[T: Serializer](t: T) =
-    ForcedConversion(?[Serializer[T]].serialize(t))
+  implicit def forceConversion[T, D](t: T)(implicit ser: Serializer[T, D]) =
+    ForcedConversion[D](ser.serialize(t))
 }
-case class ForcedConversion(var value: Any)
+case class ForcedConversion[-D](var value: Any)
 
