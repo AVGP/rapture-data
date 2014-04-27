@@ -37,8 +37,8 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def construct(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
 
-  def parse[Source, R <: AstType](s: Source)(implicit eh: ExceptionHandler,
-      parser: Parser[Source, R]): eh.![Type, ParseException] = eh.wrap {
+  def parse[Source, R <: AstType](s: Source)(implicit rts: Rts,
+      parser: Parser[Source, R]): rts.Wrap[Type, ParseException] = rts wrap {
     construct(try VCell(parser.parse(s).get) catch {
       case e: NoSuchElementException => throw new ParseException(s.toString)
     }, Vector())(parser.ast)
@@ -92,8 +92,8 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
     } } ($root.value -> $path)
 
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
-  def as[S](implicit ext: Extractor[S, T], eh: ExceptionHandler): eh.![S, DataGetException] =
-    eh wrap {
+  def as[S](implicit ext: Extractor[S, T], rts: Rts): rts.Wrap[S, DataGetException] =
+    rts wrap {
       try ext.construct($wrap($normalize)) catch {
         case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
         case e: MissingValueException => throw e

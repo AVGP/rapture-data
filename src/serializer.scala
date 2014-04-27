@@ -28,6 +28,6 @@ import scala.annotation._
 import language.experimental.macros
 import language.higherKinds
 
-@implicitNotFound("Cannot serialize type ${T}. Please provide an implicit of type Serialiser[${T}].")
+@implicitNotFound("Cannot serialize type ${T} to ${D}. Please provide an implicit Serializer of type ${T}.")
 trait Serializer[T, -D] { def serialize(t: T): Any }
 
