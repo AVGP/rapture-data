@@ -22,9 +22,12 @@ package rapture.data
 
 import rapture.core._
 
-class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst](companion: DataCompanion[Data, AstType], sc: StringContext, parser: Parser[String, AstType]) {
+class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
+    (companion: DataCompanion[Data, AstType], sc: StringContext,
+    parser: Parser[String, AstType]) {
 
-  def apply(exprs: ForcedConversion[Data]*)(implicit rts: Rts): rts.Wrap[Data, ParseException] =
+  def apply(exprs: ForcedConversion[Data]*)(implicit rts: Rts[ParseMethods]):
+      rts.Wrap[Data, ParseException] =
     rts wrap {
       val sb = new StringBuilder
       val textParts = sc.parts.iterator

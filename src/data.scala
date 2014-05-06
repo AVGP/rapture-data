@@ -37,7 +37,7 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def construct(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
 
-  def parse[Source, R <: AstType](s: Source)(implicit rts: Rts,
+  def parse[Source, R <: AstType](s: Source)(implicit rts: Rts[ParseMethods],
       parser: Parser[Source, R]): rts.Wrap[Type, ParseException] = rts wrap {
     construct(try VCell(parser.parse(s).get) catch {
       case e: NoSuchElementException => throw new ParseException(s.toString)
@@ -60,6 +60,10 @@ case class DPath(path: List[String]) extends Dynamic {
 }
 
 case class VCell(var value: Any)
+
+trait RaptureDataMethods extends RtsGroup
+trait ExtractionMethods extends RaptureDataMethods
+trait ParseMethods extends RaptureDataMethods
 
 trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic {
   val $root: VCell
@@ -92,26 +96,22 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
     } } ($root.value -> $path)
 
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
-  def as[S](implicit ext: Extractor[S, T], rts: Rts): rts.Wrap[S, DataGetException] =
-    rts wrap {
-      try ext.construct($wrap($normalize)) catch {
-        case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
-        case e: MissingValueException => throw e
-      }
+  def as[S](implicit ext: Extractor[S, T], rts: Rts[ExtractionMethods]):
+      rts.Wrap[S, DataGetException] = rts wrap {
+    try ext.construct($wrap($normalize)) catch {
+      case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
+      case e: MissingValueException => throw e
     }
-
-  def format: String
-
-  def serialize: String
+  }
 
   def apply(i: Int = 0): T = $deref(Left(i) +: $path)
 
   def applyDynamic(key: String)(i: Int = 0): T = selectDynamic(key).apply(i)
 
-  override def equals(any: Any) = any match {
+  override def equals(any: Any) = try { any match {
     case any: DataType[_, _] => $normalize == any.$normalize
     case _ => false
-  }
+  } } catch { case e: Exception => false }
 
   override def hashCode = $root.value.hashCode & "json".hashCode
 
@@ -120,10 +120,6 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
 
   def extract(sp: Vector[String]): DataType[T, AstType] =
     if(sp.isEmpty) this else selectDynamic(sp.head).extract(sp.tail)
-
-  override def toString = try format catch {
-    case e: DataGetException => "undefined"
-  }
 
   def ++[S <: DataType[S, Rep] forSome { type Rep }](b: S): T = {
     def merge(a: Any, b: Any): Any = {
