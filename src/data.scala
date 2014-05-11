@@ -37,8 +37,8 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def construct(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
 
-  def parse[Source, R <: AstType](s: Source)(implicit rts: Rts[ParseMethods],
-      parser: Parser[Source, R]): rts.Wrap[Type, ParseException] = rts wrap {
+  def parse[Source, R <: AstType](s: Source)(implicit mode: Mode[ParseMethods],
+      parser: Parser[Source, R]): mode.Wrap[Type, ParseException] = mode wrap {
     construct(try VCell(parser.parse(s).get) catch {
       case e: NoSuchElementException => throw new ParseException(s.toString)
     }, Vector())(parser.ast)
@@ -50,9 +50,6 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
   def unapply(value: Any)(implicit ast: AstType): Option[Type] =
     Some(construct(VCell(value), Vector()))
 
-  def format(value: Any, ln: Int, ast: AstType, pad: String,
-      brk: String): String
-
 }
 
 case class DPath(path: List[String]) extends Dynamic {
@@ -61,7 +58,7 @@ case class DPath(path: List[String]) extends Dynamic {
 
 case class VCell(var value: Any)
 
-trait RaptureDataMethods extends RtsGroup
+trait RaptureDataMethods extends ModeGroup
 trait ExtractionMethods extends RaptureDataMethods
 trait ParseMethods extends RaptureDataMethods
 
@@ -96,8 +93,8 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
     } } ($root.value -> $path)
 
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
-  def as[S](implicit ext: Extractor[S, T], rts: Rts[ExtractionMethods]):
-      rts.Wrap[S, DataGetException] = rts wrap {
+  def as[S](implicit ext: Extractor[S, T], mode: Mode[ExtractionMethods]):
+      mode.Wrap[S, DataGetException] = mode wrap {
     try ext.construct($wrap($normalize)) catch {
       case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
       case e: MissingValueException => throw e

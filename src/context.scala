@@ -26,9 +26,9 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
     (companion: DataCompanion[Data, AstType], sc: StringContext,
     parser: Parser[String, AstType]) {
 
-  def apply(exprs: ForcedConversion[Data]*)(implicit rts: Rts[ParseMethods]):
-      rts.Wrap[Data, ParseException] =
-    rts wrap {
+  def apply(exprs: ForcedConversion[Data]*)(implicit mode: Mode[ParseMethods]):
+      mode.Wrap[Data, ParseException] =
+    mode wrap {
       val sb = new StringBuilder
       val textParts = sc.parts.iterator
       val expressions = exprs.iterator
