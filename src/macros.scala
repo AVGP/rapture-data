@@ -1,6 +1,6 @@
 /**********************************************************************************************\
-* Rapture JSON Library                                                                         *
-* Version 0.9.0                                                                                *
+* Rapture Data Library                                                                         *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -30,7 +30,8 @@ import language.higherKinds
 
 object Macros {
  
-  def extractorMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context): c.Expr[Extractor[T, Data]] = {
+  def extractorMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context): c.Expr[Extractor[T,
+      Data]] = {
     import c.universe._
 
     require(weakTypeOf[T].typeSymbol.asClass.isCaseClass)
@@ -95,7 +96,8 @@ object Macros {
     reify(new Extractor[T, Data] { def construct(data: Data): T = construction.splice })
   }
 
-  def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]): c.Expr[Serializer[T, Data]] = {
+  def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]):
+      c.Expr[Serializer[T, Data]] = {
     import c.universe._
 
     val tpe = weakTypeOf[T].typeSymbol.asClass
@@ -165,7 +167,8 @@ object Macros {
               EmptyTree,
               Apply(
                 Select(
-                  c.inferImplicitValue(appliedType(serializer, List(sc.asType.toType)), false, false),
+                  c.inferImplicitValue(appliedType(serializer, List(sc.asType.toType)), false,
+                      false),
                   newTermName("serialize")
                 ),
                 List(Ident(newTermName("v")))
@@ -176,6 +179,8 @@ object Macros {
       )
     } else throw new Exception()
 
-    reify(new Serializer[T, Data] { def serialize(t: T): Any = ast.splice.fromObject(construction.splice) })
+    reify(new Serializer[T, Data] {
+      def serialize(t: T): Any = ast.splice.fromObject(construction.splice)
+    })
   }
 }

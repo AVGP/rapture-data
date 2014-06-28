@@ -1,6 +1,6 @@
 /**********************************************************************************************\
-* Rapture JSON Library                                                                         *
-* Version 0.9.0                                                                                *
+* Rapture Data Library                                                                         *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -34,7 +34,8 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
       val expressions = exprs.iterator
       sb.append(textParts.next())
       while(textParts.hasNext) {
-        sb.append(companion.construct(VCell(expressions.next.value), Vector())(parser.ast).toString)
+        sb.append(companion.construct(VCell(expressions.next.value),
+            Vector())(parser.ast).toString)
         sb.append(textParts.next)
       }
       companion.construct(VCell(parser.parse(sb.toString).get), Vector())(parser.ast)

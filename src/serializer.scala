@@ -1,6 +1,6 @@
 /**********************************************************************************************\
-* Rapture JSON Library                                                                         *
-* Version 0.9.0                                                                                *
+* Rapture Data Library                                                                         *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -28,6 +28,7 @@ import scala.annotation._
 import language.experimental.macros
 import language.higherKinds
 
-@implicitNotFound("Cannot serialize type ${T} to ${D}. Please provide an implicit Serializer of type ${T}.")
+@implicitNotFound("Cannot serialize type ${T} to ${D}. Please provide an implicit Serializer "+
+    "of type ${T}.")
 trait Serializer[T, -D] { def serialize(t: T): Any }
 

@@ -1,6 +1,6 @@
 /**********************************************************************************************\
-* Rapture JSON Library                                                                         *
-* Version 0.9.0                                                                                *
+* Rapture Data Library                                                                         *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -149,16 +149,18 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
 trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
     extends DataType[T, AstType] {
 
-  def $updateParents(p: Vector[Either[Int, String]], newVal: Any): Unit = p match {
-    case Vector() =>
-      $root.value = newVal
-    case Left(idx) +: init =>
-      val jb = $deref(init)
-      $updateParents(init, $ast.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal))
-    case Right(key) +: init =>
-      val jb = $deref(init)
-      $updateParents(init, $ast.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key, newVal))
-  }
+  def $updateParents(p: Vector[Either[Int, String]], newVal: Any): Unit =
+    p match {
+      case Vector() =>
+        $root.value = newVal
+      case Left(idx) +: init =>
+        val jb = $deref(init)
+        $updateParents(init, $ast.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal))
+      case Right(key) +: init =>
+        val jb = $deref(init)
+        $updateParents(init, $ast.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key,
+            newVal))
+    }
 
   /** Updates the element `key` of the JSON object with the value `v` */
   def updateDynamic(key: String)(v: ForcedConversion[T]): Unit =

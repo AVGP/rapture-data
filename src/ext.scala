@@ -1,6 +1,6 @@
 /**********************************************************************************************\
-* Rapture JSON Library                                                                         *
-* Version 0.9.0                                                                                *
+* Rapture Data Library                                                                         *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -30,20 +30,20 @@ import language.experimental.macros
 import language.higherKinds
 
 object Extractor {
-  implicit def floatExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Float, Data] =
-    ext.map(_.toFloat)
+  implicit def floatExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Float,
+      Data] = ext.map(_.toFloat)
 
-  implicit def shortExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Short, Data] =
-    ext.map(_.toShort)
+  implicit def shortExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Short,
+      Data] = ext.map(_.toShort)
 
   implicit def intExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Int, Data] =
     ext.map(_.toInt)
 
-  implicit def longExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Long, Data] =
-    ext.map(_.toLong)
+  implicit def longExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Long,
+      Data] = ext.map(_.toLong)
 
-  implicit def byteExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Byte, Data] =
-    ext.map(_.toInt.toByte)
+  implicit def byteExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Byte,
+      Data] = ext.map(_.toInt.toByte)
 
   implicit def anyExtractor[Data <: DataType[_, DataAst]]: Extractor[Any, Data] =
     BasicExtractor[Any, Data](_.$root.value)
