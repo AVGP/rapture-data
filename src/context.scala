@@ -47,40 +47,35 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
     val next = new Counter(0)
     val txt = sc.parts.reduceLeft(_ + s""""${placeholder}${next()}${placeholder}" """ + _)
     
-    println("txt = "+txt)
-    println("parser.parse(txt) = "+parser.parse(txt))
-
-    val paths: Array[Vector[String]] =
-      Array.fill[Vector[String]](sc.parts.length - 1)(Vector())
+    val paths: Array[Vector[Either[Int, String]]] =
+      Array.fill[Vector[Either[Int, String]]](sc.parts.length - 1)(Vector())
     
-    def extract(any: Any, path: Vector[String]): Unit = {
-      println("Extracting "+any+" at "+path)
+    def extract(any: Any, path: Vector[Either[Int, String]]): Unit = {
       if(parser.ast.isScalar(any)) {
-        println("isScalar")
-        println("data.extract "+data.extract(path).as[Any](?, raw))
-        println("ast.getScalar = "+parser.ast.getScalar(any))
         if(data.extract(path).as[Any](?, raw) !=
             parser.ast.getScalar(any)) throw new Exception("Value doesn't match")
       } else if(parser.ast.isObject(any)) {
-        println("isObject")
         parser.ast.getObject(any) foreach { case (k, v) =>
-          println("getting object: "+v+": "+v.getClass)
-          if(parser.ast.isString(v)) { println("isString"); parser.ast.getString(v) match {
+          if(parser.ast.isString(v)) parser.ast.getString(v) match {
             case PlaceholderNumber(n) =>
-              println("matched "+n)
-              paths(n.toInt) = path :+ k
-            case _ => extract(v, path :+ k)
-          } } else extract(v, path :+ k)
+              paths(n.toInt) = path :+ Right(k)
+            case _ => extract(v, path :+ Right(k))
+          } else extract(v, path :+ Right(k))
         }
-      } else throw new Exception("Can't match on arrays.")
+      } else {
+        parser.ast.getArray(any).zipWithIndex foreach { case (e, i) =>
+          if(parser.ast.isString(e)) parser.ast.getString(e) match {
+            case PlaceholderNumber(n) =>
+              paths(n.toInt) = path :+ Left(i)
+            case _ => extract(e, path :+ Left(i))
+          } else extract(e, path :+ Left(i))
+        }
+      }
     }
 
     extract(parser.parse(txt).get, Vector())
 
-    println("paths = "+paths)
-
     val extracts = paths.map(data.extract)
-    println("extracts = "+extracts)
     if(extracts.exists(_.$root.value == null)) None
     else Some(extracts)
   } catch { case e: Exception => None }

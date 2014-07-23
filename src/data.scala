@@ -115,8 +115,11 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
   /** Assumes the Json object wraps a `Map`, and extracts the element `key`. */
   def selectDynamic(key: String): T = $deref(Right(key) +: $path)
 
-  def extract(sp: Vector[String]): DataType[T, AstType] =
-    if(sp.isEmpty) this else selectDynamic(sp.head).extract(sp.tail)
+  def extract(sp: Vector[Either[Int, String]]): DataType[T, AstType] =
+    if(sp.isEmpty) this else sp match {
+      case Left(i) +: tail => apply(i).extract(tail)
+      case Right(e) +: tail => selectDynamic(e).extract(tail)
+    }
 
   def ++[S <: DataType[S, Rep] forSome { type Rep }](b: S): T = {
     def merge(a: Any, b: Any): Any = {
