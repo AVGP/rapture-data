@@ -66,7 +66,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
   val $root: VCell
   implicit def $ast: AstType
   def $path: Vector[Either[Int, String]]
-  def $normalize = doNormalize(false)
+  def $normalize: Any = doNormalize(false)
   def $acessInnerMap(k: String): Any = $ast.dereferenceObject($root.value, k)
   def $wrap(any: Any, $path: Vector[Either[Int, String]] = Vector()): T
   def $deref($path: Vector[Either[Int, String]] = Vector()): T
