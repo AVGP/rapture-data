@@ -28,6 +28,12 @@ import language.dynamics
 import language.higherKinds
 import language.existentials
 
+@implicitNotFound("Cannot find an implicit Formatter for $AstType data.")
+trait Formatter[-AstType <: DataAst] {
+  type Out
+  def format(any: Any): Out
+}
+
 object DataCompanion { object Empty }
 
 trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
@@ -49,6 +55,9 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def unapply(value: Any)(implicit ast: AstType): Option[Type] =
     Some(construct(VCell(value), Vector()))
+
+  def format[T <: DataType[T, AstType]](data: T)(implicit f: Formatter[_ <: AstType]): f.Out =
+    f.format(data.$normalize)
 
 }
 
