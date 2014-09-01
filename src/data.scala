@@ -167,11 +167,12 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
         $root.value = newVal
       case Left(idx) +: init =>
         val jb = $deref(init)
-        $updateParents(init, $ast.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal))
+        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal)
+        if(jb ne newJb) $updateParents(init, newJb)
       case Right(key) +: init =>
         val jb = $deref(init)
-        $updateParents(init, $ast.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key,
-            newVal))
+        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key, newVal)
+        if(jb ne newJb) $updateParents(init, newJb)
     }
 
   /** Updates the element `key` of the JSON object with the value `v` */
