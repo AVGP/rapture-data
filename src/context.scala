@@ -76,8 +76,7 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
     
     def extract(any: Any, path: Vector[Either[Int, String]]): Unit = {
       if(parser.ast.isScalar(any)) {
-        if(data.extract(path).as[Any](?, raw) !=
-            parser.ast.getScalar(any)) throw new Exception("Value doesn't match")
+        if(data.extract(path).as[Any] != any) throw new Exception("Value doesn't match")
       } else if(parser.ast.isObject(any)) {
         val obj = parser.ast.getObject(any)
         if(objectMatching.checkSizes) objectSizes(path) = obj.size

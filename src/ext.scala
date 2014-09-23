@@ -72,6 +72,13 @@ trait Extractor[T, -D] { ext =>
   def map[T2](fn: T => T2) = new Extractor[T2, D] {
     def construct(any: D): T2 = fn(ext.construct(any))
   }
+
+  def orElse[TS >: T, T2 <: TS, D2 <: D](ext2: Extractor[T2, D2]): Extractor[TS, D2] =
+    new Extractor[TS, D2] {
+      def construct(any: D2): TS = try ext.construct(any) catch {
+        case e: Exception => ext2.construct(any)
+      }
+  }
 }
 
 case class BasicExtractor[T, -D](val cast: D => T) extends Extractor[T, D] {
