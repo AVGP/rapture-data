@@ -167,21 +167,21 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
         $root.value = newVal
       case Left(idx) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse(Nil), idx, newVal)
+        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)), idx, newVal)
         if(jb ne newJb) $updateParents(init, newJb)
       case Right(key) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse(Map()), key, newVal)
+        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())), key, newVal)
         if(jb ne newJb) $updateParents(init, newJb)
     }
 
   /** Updates the element `key` of the JSON object with the value `v` */
   def updateDynamic(key: String)(v: ForcedConversion[T]): Unit =
-    $updateParents($path, $ast.setObjectValue(Try($normalize).getOrElse(Map()), key, v.value))
+    $updateParents($path, $ast.setObjectValue(Try($normalize).getOrElse($ast.fromObject(Map())), key, v.value))
 
   /** Updates the `i`th element of the JSON array with the value `v` */
   def update[T2](i: Int, v: T2)(implicit ser: Serializer[T2, T]): Unit =
-    $updateParents($path, $ast.setArrayValue(Try($normalize).getOrElse(Nil), i,
+    $updateParents($path, $ast.setArrayValue(Try($normalize).getOrElse($ast.fromArray(Nil)), i,
         ser.serialize(v)))
 
   /** Removes the specified key from the JSON object */
