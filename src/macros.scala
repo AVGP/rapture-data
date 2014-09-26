@@ -30,7 +30,7 @@ import language.higherKinds
 
 object Macros {
  
-  def extractorMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context): c.Expr[Extractor[T,
+  def extractorMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: blackbox.Context): c.Expr[Extractor[T,
       Data]] = {
     import c.universe._
 
@@ -40,13 +40,13 @@ object Macros {
 
     // FIXME: This will perform badly for large objects, as the map extraction is applied to
     // all elements once for every element
-    val params = weakTypeOf[T].declarations collect {
+    val params = weakTypeOf[T].decls collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
       val paramValue = c.Expr[Any](Apply(
         Select(
-          Ident(newTermName("data")),
-          newTermName("$accessInnerMap")
+          Ident(TermName("data")),
+          TermName("$accessInnerMap")
         ),
         List(Literal(Constant(p.name.toString)))
       ))
@@ -59,13 +59,13 @@ object Macros {
             New(
               TypeTree(weakTypeOf[Data])
             ),
-            nme.CONSTRUCTOR
+            termNames.CONSTRUCTOR
           ),
           List(newArray.tree)
         ),
         List(Select(
-          Ident(newTermName("data")),
-          newTermName("$ast")
+          Ident(TermName("data")),
+          TermName("$ast")
         ))
       )
 
@@ -75,7 +75,7 @@ object Macros {
             c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
                 false, false)
           ).tree,
-          newTermName("construct")
+          TermName("construct")
         ),
         List(newDataArray)
       )
@@ -87,7 +87,7 @@ object Macros {
           New(
             TypeTree(weakTypeOf[T])
           ),
-          nme.CONSTRUCTOR
+          termNames.CONSTRUCTOR
         ),
         params.to[List]
       )
@@ -96,7 +96,7 @@ object Macros {
     reify(new Extractor[T, Data] { def construct(data: Data): T = construction.splice })
   }
 
-  def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]):
+  def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: blackbox.Context)(ast: c.Expr[DataAst]):
       c.Expr[Serializer[T, Data]] = {
     import c.universe._
 
@@ -105,7 +105,7 @@ object Macros {
 
     val construction = if(tpe.isCaseClass) {
 
-      val params = weakTypeOf[T].declarations collect {
+      val params = weakTypeOf[T].decls collect {
         case m: MethodSymbol if m.isCaseAccessor => m.asMethod
       } map { p =>
         Apply(
@@ -113,24 +113,24 @@ object Macros {
             Apply(
               Select(
                 Ident(definitions.PredefModule),
-                newTermName("any2ArrowAssoc")
+                TermName("any2ArrowAssoc")
               ),
               List(
                 Literal(Constant(p.name.toString))
               )
             ),
-            newTermName("$minus$greater")
+            TermName("$minus$greater")
           ),
           List(
             Apply(
               Select(
                 c.inferImplicitValue(appliedType(serializer, List(p.returnType,
                     weakTypeOf[Data])), false, false),
-                newTermName("serialize")
+                TermName("serialize")
               ),
               List(
                 Select(
-                  Ident(newTermName("t")),
+                  Ident(TermName("t")),
                   p.name
                 )
               )
@@ -144,9 +144,9 @@ object Macros {
           Select(
             Select(
               Ident(definitions.PredefModule),
-              newTermName("Map")
+              TermName("Map")
             ),
-            newTermName("apply")
+            TermName("apply")
           ),
           params.to[List]
         )
@@ -154,13 +154,13 @@ object Macros {
     } else if(tpe.isSealed) {
       c.Expr[Map[String, Any]](
         Match(
-          Ident(newTermName("t")),
+          Ident(TermName("t")),
           tpe.knownDirectSubclasses.to[List] map { sc =>
             CaseDef(
               Bind(
-                newTermName("v"),
+                TermName("v"),
                 Typed(
-                  Ident(nme.WILDCARD),
+                  Ident(termNames.WILDCARD),
                   Ident(sc.asClass)
                 )
               ),
@@ -169,9 +169,9 @@ object Macros {
                 Select(
                   c.inferImplicitValue(appliedType(serializer, List(sc.asType.toType)), false,
                       false),
-                  newTermName("serialize")
+                  TermName("serialize")
                 ),
-                List(Ident(newTermName("v")))
+                List(Ident(TermName("v")))
               )
             )
           }

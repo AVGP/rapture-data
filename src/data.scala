@@ -168,11 +168,23 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
       case Left(idx) +: init =>
         val jb = $deref(init)
         val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)), idx, newVal)
-        if(jb ne newJb) $updateParents(init, newJb)
+        if(jb match {
+          case jb: AnyRef => newJb match {
+            case newJb: AnyRef => jb ne newJb
+            case _ => false
+          }
+          case _ => jb == newJb
+        }) $updateParents(init, newJb)
       case Right(key) +: init =>
         val jb = $deref(init)
         val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())), key, newVal)
-        if(jb ne newJb) $updateParents(init, newJb)
+        if(jb match {
+          case jb: AnyRef => newJb match {
+            case newJb: AnyRef => jb ne newJb
+            case _ => false
+          }
+          case _ => jb == newJb
+        }) $updateParents(init, newJb)
     }
 
   /** Updates the element `key` of the JSON object with the value `v` */
