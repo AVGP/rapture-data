@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Data Library                                                                         *
-* Version 0.10.0                                                                               *
+* Version 1.0.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
