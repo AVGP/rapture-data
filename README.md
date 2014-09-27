@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/propensive/rapture-data.png?branch=scala-2.10)](https://travis-ci.org/propensive/rapture-data)
 Rapture Data
 ============
 
