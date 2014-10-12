@@ -58,7 +58,9 @@ object Extractor {
   implicit def optionExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataAst }]
       (implicit ext: Extractor[T, Data]): Extractor[Option[T], Data] =
     new BasicExtractor[Option[T], Data](x => try Some(x.$root.value: Any) map (v =>
-        ext.construct(x.$wrap(v))) catch { case e: Exception => None })
+        ext.construct(x.$wrap(v))) catch { case e: Exception => None }) {
+      override def suppressErrors = true
+    }
 
   implicit def mapExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataAst }]
       (implicit ext: Extractor[T, Data]): Extractor[Map[String, T], Data] =
@@ -68,6 +70,7 @@ object Extractor {
 
 @implicitNotFound("cannot extract type ${T} from ${D}.")
 trait Extractor[T, -D] { ext =>
+  def suppressErrors = false
   def construct(any: D): T
   def map[T2](fn: T => T2) = new Extractor[T2, D] {
     def construct(any: D): T2 = fn(ext.construct(any))

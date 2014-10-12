@@ -69,12 +69,14 @@ object Macros {
         ))
       )
 
+      val paramExtractor = c.Expr[Extractor[_, _]](
+        c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
+            false, false)
+      ).tree
+
       Apply(
         Select(
-          c.Expr[Extractor[_, _]](
-            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
-                false, false)
-          ).tree,
+          paramExtractor,
           newTermName("construct")
         ),
         List(newDataArray)
