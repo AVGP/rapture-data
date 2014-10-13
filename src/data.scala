@@ -88,10 +88,13 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
   implicit def $ast: AstType
   def $path: Vector[Either[Int, String]]
   def $normalize: Any = doNormalize(false)
-  def $acessInnerMap(k: String): Any = $ast.dereferenceObject($root.value, k)
+  def $accessInnerMap(k: String): Any = $ast.dereferenceObject($root.value, k)
+  def $accessInnerMapSafe(k: String): Any =
+    try $accessInnerMap(k) catch { case e: Exception => DataTypes.Undefined }
   def $wrap(any: Any, $path: Vector[Either[Int, String]] = Vector()): T
   def $deref($path: Vector[Either[Int, String]] = Vector()): T
-
+  def $accessWith[V](k: String, ext: Extractor[V, T]): Any =
+    if(ext.suppressErrors) $accessInnerMapSafe(k) else $accessInnerMap(k)
   def $extract($path: Vector[Either[Int, String]]): T
 
   protected def doNormalize(orEmpty: Boolean): Any =

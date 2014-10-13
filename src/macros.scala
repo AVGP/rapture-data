@@ -43,16 +43,22 @@ object Macros {
     val params = weakTypeOf[T].declarations collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
+      
+      val paramExtractor = c.Expr[Extractor[_, _]](
+        c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
+            false, false)
+      ).tree
+
       val paramValue = c.Expr[Any](Apply(
         Select(
           Ident(newTermName("data")),
-          newTermName("$accessInnerMap")
+          newTermName("$accessWith")
         ),
-        List(Literal(Constant(p.name.toString)))
+        List(Literal(Constant(p.name.toString)), paramExtractor)
       ))
-
-      val newArray = reify(VCell(paramValue.splice))
       
+      val newArray = reify(VCell(paramValue.splice))
+     
       val newDataArray = Apply(
         Apply(
           Select(
@@ -68,11 +74,6 @@ object Macros {
           newTermName("$ast")
         ))
       )
-
-      val paramExtractor = c.Expr[Extractor[_, _]](
-        c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
-            false, false)
-      ).tree
 
       Apply(
         Select(
