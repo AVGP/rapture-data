@@ -71,14 +71,31 @@ trait RaptureDataMethods extends ModeGroup
 trait ExtractionMethods extends RaptureDataMethods
 trait ParseMethods extends RaptureDataMethods
 
-trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic {
+trait DynamicData[+T <: DynamicData[T, AstType], +AstType <: DataAst] extends Dynamic {
+
+  /** Assumes the Json object wraps a `Map`, and extracts the element `key`. */
+  def selectDynamic(key: String): T = $deref(Right(key) +: $path)
+
+  def applyDynamic(key: String)(i: Int = 0): T = selectDynamic(key).apply(i)
+
+  def $deref($path: Vector[Either[Int, String]]): T
+  def $path: Vector[Either[Int, String]]
+
+}
+
+trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
   val $root: VCell
   implicit def $ast: AstType
   def $path: Vector[Either[Int, String]]
   def $normalize: Any = doNormalize(false)
-  def $acessInnerMap(k: String): Any = $ast.dereferenceObject($root.value, k)
+  def $accessInnerMap(k: String): Any = $ast.dereferenceObject($root.value, k)
+  def $accessInnerMapSafe(k: String): Any =
+    try $accessInnerMap(k) catch { case e: Exception => DataTypes.Undefined }
   def $wrap(any: Any, $path: Vector[Either[Int, String]] = Vector()): T
   def $deref($path: Vector[Either[Int, String]] = Vector()): T
+  def $accessWith[V](k: String, ext: Extractor[V, T]): Any =
+    if(ext.suppressErrors) $accessInnerMapSafe(k) else $accessInnerMap(k)
+  def $extract($path: Vector[Either[Int, String]]): T
 
   protected def doNormalize(orEmpty: Boolean): Any =
     yCombinator[(Any, Vector[Either[Int, String]]), Any] { fn => _ match {
@@ -112,23 +129,12 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] extends Dynamic 
 
   def apply(i: Int = 0): T = $deref(Left(i) +: $path)
 
-  def applyDynamic(key: String)(i: Int = 0): T = selectDynamic(key).apply(i)
-
   override def equals(any: Any) = try { any match {
     case any: DataType[_, _] => $normalize == any.$normalize
     case _ => false
   } } catch { case e: Exception => false }
 
   override def hashCode = $root.value.hashCode & "json".hashCode
-
-  /** Assumes the Json object wraps a `Map`, and extracts the element `key`. */
-  def selectDynamic(key: String): T = $deref(Right(key) +: $path)
-
-  def extract(sp: Vector[Either[Int, String]]): DataType[T, AstType] =
-    if(sp.isEmpty) this else sp match {
-      case Left(i) +: tail => apply(i).extract(tail)
-      case Right(e) +: tail => selectDynamic(e).extract(tail)
-    }
 
   def ++[S <: DataType[S, Rep] forSome { type Rep }](b: S): T = {
     def merge(a: Any, b: Any): Any = {
