@@ -76,7 +76,7 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
     
     def extract(any: Any, path: Vector[Either[Int, String]]): Unit = {
       if(parser.ast.isScalar(any)) {
-        if(data.extract(path).as[Any] != any) throw new Exception("Value doesn't match")
+        if(data.$extract(path).as[Any] != any) throw new Exception("Value doesn't match")
       } else if(parser.ast.isObject(any)) {
         val obj = parser.ast.getObject(any)
         if(objectMatching.checkSizes) objectSizes(path) = obj.size
@@ -102,13 +102,13 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
 
     extract(parser.parse(txt).get, Vector())
 
-    val extracts = paths.map(data.extract)
+    val extracts = paths.map(data.$extract)
     val matchedArrayLengths = arrayLengths.forall { case (p, len) =>
-      parser.ast.getArray(data.extract(p).$normalize).length == len
+      parser.ast.getArray(data.$extract(p).$normalize).length == len
     }
     
     val matchedObjectSizes = objectSizes.forall { case (p, s) =>
-      parser.ast.getObject(data.extract(p).$normalize).size == s
+      parser.ast.getObject(data.$extract(p).$normalize).size == s
     }
 
     if(extracts.exists(_.$root.value == null) || !matchedArrayLengths || !matchedObjectSizes) None
