@@ -1,6 +1,6 @@
 object project extends ProjectSettings {
   def scalaVersion = "2.10.4"
-  def version = "1.0.1"
+  def version = "1.0.2"
   def name = "data"
   def description = "Rapture Data provides a basis for working with structured data, such as JSON and XML"
   
@@ -12,7 +12,6 @@ object project extends ProjectSettings {
 
   def imports = Seq(
     "rapture.core._",
-    "rapture.data._",
-    "strategy.throwExceptions"
+    "rapture.data._"
   )
 }
