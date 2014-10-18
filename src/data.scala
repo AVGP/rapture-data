@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Data Library                                                                         *
-* Version 1.0.0                                                                                *
+* Version 1.0.3                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -61,8 +61,10 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
 }
 
-case class DPath(path: List[String]) extends Dynamic {
-  def selectDynamic(v: String) = DPath(v :: path)
+case class DPath(path: List[Either[Int, String]]) extends Dynamic {
+  def selectDynamic(v: String) = DPath(Right(v) :: path)
+  def applyDynamic(v: String)(i: Int) = DPath(Left(i) :: Right(v) :: path)
+  def apply(i: Int) = DPath(Left(i) :: path)
 }
 
 case class VCell(var value: Any)
@@ -156,9 +158,9 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
   }
 
   def +(pv: (DPath => DPath, ForcedConversion[T])) = {
-    def add(path: List[String], v: Any): Any = path match {
+    def add(path: List[Either[Int, String]], v: Any): Any = path match {
       case Nil => v
-      case next :: list => $ast.fromObject(Map(next -> add(list, v)))
+      case Right(next) :: list => $ast.fromObject(Map(next -> add(list, v)))
     }
     this ++ $wrap(add(pv._1(DPath(Nil)).path.reverse, pv._2.value), Vector())
   }

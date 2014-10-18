@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Data Library                                                                         *
-* Version 1.0.0                                                                                *
+* Version 1.0.3                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -43,19 +43,18 @@ object Macros {
     val params = weakTypeOf[T].decls collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
-      
-      val paramExtractor = c.Expr[Extractor[_, _]](
-        c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
-            false, false)
-      ).tree
-
       val paramValue = c.Expr[Any](Apply(
         Select(
           Ident(TermName("data")),
           TermName("$accessWith")
         ),
-        List(Literal(Constant(p.name.toString)), paramExtractor)
-      ))
+        List(Literal(Constant(p.name.toString)),
+          c.Expr[Extractor[_, _]](
+            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
+                false, false)
+          ).tree
+        ))
+      )
       
       val newArray = reify(VCell(paramValue.splice))
      
@@ -77,7 +76,10 @@ object Macros {
 
       Apply(
         Select(
-          paramExtractor,
+          c.Expr[Extractor[_, _]](
+            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
+                false, false)
+          ).tree,
           TermName("construct")
         ),
         List(newDataArray)
