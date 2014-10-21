@@ -82,7 +82,13 @@ object Macros {
           ).tree,
           newTermName("construct")
         ),
-        List(newDataArray)
+        List(
+          newDataArray,
+          Select(
+            Ident(newTermName("data")),
+            newTermName("$ast")
+          )
+        )
       )
     }
 
@@ -98,7 +104,9 @@ object Macros {
       )
     )
 
-    reify(new Extractor[T, Data] { def construct(data: Data): T = construction.splice })
+    reify(new Extractor[T, Data] {
+      def construct(data: Data, ast: DataAst): T = construction.splice
+    })
   }
 
   def serializerMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context)(ast: c.Expr[DataAst]):
