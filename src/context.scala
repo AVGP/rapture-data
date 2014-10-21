@@ -79,7 +79,7 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
         if(data.$extract(path).as[Any] != any) throw new Exception("Value doesn't match")
       } else if(parser.ast.isObject(any)) {
         val obj = parser.ast.getObject(any)
-        if(objectMatching.checkSizes) objectSizes(path) = obj.size
+        objectSizes(path) = obj.size
         obj foreach { case (k, v) =>
           if(parser.ast.isString(v)) parser.ast.getString(v) match {
             case PlaceholderNumber(n) =>
@@ -87,7 +87,7 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
             case _ => extract(v, path :+ Right(k))
           } else extract(v, path :+ Right(k))
         }
-      } else {
+      } else if(parser.ast.isArray(any)) {
         val array = parser.ast.getArray(any)
         if(arrayMatching.checkLengths) arrayLengths(path) = array.length
         array.zipWithIndex foreach { case (e, i) =>
@@ -97,18 +97,20 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
             case _ => extract(e, path :+ Left(i))
           } else extract(e, path :+ Left(i))
         }
-      }
+      } else throw new Exception("Value doesn't match")
     }
 
     extract(parser.parse(txt).get, Vector())
 
-    val extracts = paths.map(data.$extract)
+    val extracts = paths.map(data.$extract(_))
+    extracts.map(_.$normalize)
     val matchedArrayLengths = arrayLengths.forall { case (p, len) =>
       parser.ast.getArray(data.$extract(p).$normalize).length == len
     }
     
     val matchedObjectSizes = objectSizes.forall { case (p, s) =>
-      parser.ast.getObject(data.$extract(p).$normalize).size == s
+      if(objectMatching.checkSizes) parser.ast.getObject(data.$extract(p).$normalize).size == s
+      else parser.ast.getObject(data.$extract(p).$normalize).size >= 0
     }
 
     if(extracts.exists(_.$root.value == null) || !matchedArrayLengths || !matchedObjectSizes) None

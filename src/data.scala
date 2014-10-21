@@ -28,7 +28,7 @@ import language.dynamics
 import language.higherKinds
 import language.existentials
 
-@implicitNotFound("Cannot find an implicit Formatter for $AstType data.")
+@implicitNotFound("Cannot find an implicit Formatter for ${AstType} data.")
 trait Formatter[-AstType <: DataAst] {
   type Out
   def format(any: Any): Out
@@ -123,7 +123,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
   def as[S](implicit ext: Extractor[S, T], mode: Mode[ExtractionMethods]):
       mode.Wrap[S, DataGetException] = mode wrap {
-    try ext.construct($wrap($normalize)) catch {
+    try ext.construct($wrap($normalize), $ast) catch {
       case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
       case e: MissingValueException => throw e
     }
@@ -161,6 +161,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
     def add(path: List[Either[Int, String]], v: Any): Any = path match {
       case Nil => v
       case Right(next) :: list => $ast.fromObject(Map(next -> add(list, v)))
+      case Left(next) :: list => ??? // FIXME: Implement this!
     }
     this ++ $wrap(add(pv._1(DPath(Nil)).path.reverse, pv._2.value), Vector())
   }

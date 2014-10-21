@@ -53,37 +53,37 @@ object Extractor {
       DataAst }](implicit cbf: scala.collection.generic.CanBuildFrom[Nothing, T,
       Coll[T]], ext: Extractor[T, Data]): Extractor[Coll[T], Data] =
     BasicExtractor[Coll[T], Data]({ x => x.$ast.getArray(x.$root.value).to[List].map({v =>
-        ext.construct(x.$wrap(v)) }).to[Coll] })
+        ext.construct(x.$wrap(v), x.$ast) }).to[Coll] })
 
   implicit def optionExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataAst }]
       (implicit ext: Extractor[T, Data]): Extractor[Option[T], Data] =
     new BasicExtractor[Option[T], Data](x => try Some(x.$root.value: Any) map (v =>
-        ext.construct(x.$wrap(v))) catch { case e: Exception => None }) {
+        ext.construct(x.$wrap(v), x.$ast)) catch { case e: Exception => None }) {
       override def suppressErrors = true
     }
 
   implicit def mapExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataAst }]
       (implicit ext: Extractor[T, Data]): Extractor[Map[String, T], Data] =
     BasicExtractor[Map[String, T], Data](x => x.$ast.getObject(x.$root.value) mapValues {
-        v => ext.construct(x.$wrap(v)) })
+        v => ext.construct(x.$wrap(v), x.$ast) })
 }
 
 @implicitNotFound("cannot extract type ${T} from ${D}.")
 trait Extractor[T, -D] { ext =>
   def suppressErrors = false
-  def construct(any: D): T
+  def construct(any: D, ast: DataAst): T
   def map[T2](fn: T => T2) = new Extractor[T2, D] {
-    def construct(any: D): T2 = fn(ext.construct(any))
+    def construct(any: D, ast: DataAst): T2 = fn(ext.construct(any, ast))
   }
 
   def orElse[TS >: T, T2 <: TS, D2 <: D](ext2: Extractor[T2, D2]): Extractor[TS, D2] =
     new Extractor[TS, D2] {
-      def construct(any: D2): TS = try ext.construct(any) catch {
-        case e: Exception => ext2.construct(any)
+      def construct(any: D2, ast: DataAst): TS = try ext.construct(any, ast) catch {
+        case e: Exception => ext2.construct(any, ast)
       }
   }
 }
 
 case class BasicExtractor[T, -D](val cast: D => T) extends Extractor[T, D] {
-  def construct(d: D) = cast(d)
+  def construct(d: D, ast: DataAst) = cast(d)
 }
