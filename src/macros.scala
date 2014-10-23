@@ -85,8 +85,8 @@ object Macros {
         List(
           newDataArray,
           Select(
-            Ident(newTermName("data")),
-            newTermName("$ast")
+            Ident(TermName("data")),
+            TermName("$ast")
           )
         )
       )
