@@ -37,8 +37,6 @@ object Macros {
     require(weakTypeOf[T].typeSymbol.asClass.isCaseClass)
     val extractor = typeOf[Extractor[_, _]].typeSymbol.asType.toTypeConstructor
 
-    // FIXME: This will perform badly for large objects, as the map extraction is applied to
-    // all elements once for every element
     val params = weakTypeOf[T].declarations collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
