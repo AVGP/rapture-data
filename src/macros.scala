@@ -40,7 +40,7 @@ object Macros {
     val params = weakTypeOf[T].decls collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
-      val freshName = TermName(c.fresh("eval$"))
+      val freshName = TermName(c.freshName("eval$"))
       val valDef = ValDef(
         Modifiers(),
         freshName,
