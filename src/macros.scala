@@ -35,14 +35,30 @@ object Macros {
     import c.universe._
 
     require(weakTypeOf[T].typeSymbol.asClass.isCaseClass)
-
     val extractor = typeOf[Extractor[_, _]].typeSymbol.asType.toTypeConstructor
 
-    // FIXME: This will perform badly for large objects, as the map extraction is applied to
-    // all elements once for every element
     val params = weakTypeOf[T].declarations collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
+      val freshName = newTermName(c.fresh("eval$"))
+      val valDef = ValDef(
+        Modifiers(),
+        freshName,
+        TypeTree(
+          appliedType(
+            extractor,
+            List(p.returnType, weakTypeOf[Data])
+          )
+        ),
+        c.inferImplicitValue(
+          appliedType(
+            extractor,
+            List(p.returnType, weakTypeOf[Data])
+          )
+        )
+      )
+      
+      
       val paramValue = c.Expr[Any](Apply(
         Select(
           Ident(newTermName("data")),
@@ -50,8 +66,7 @@ object Macros {
         ),
         List(Literal(Constant(p.name.toString)),
           c.Expr[Extractor[_, _]](
-            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
-                false, false)
+            Ident(freshName)
           ).tree
         ))
       )
@@ -74,11 +89,10 @@ object Macros {
         ))
       )
 
-      Apply(
+      Block(List(valDef), Apply(
         Select(
           c.Expr[Extractor[_, _]](
-            c.inferImplicitValue(appliedType(extractor, List(p.returnType, weakTypeOf[Data])),
-                false, false)
+            Ident(freshName)
           ).tree,
           newTermName("construct")
         ),
@@ -89,7 +103,7 @@ object Macros {
             newTermName("$ast")
           )
         )
-      )
+      ))
     }
 
     val construction = c.Expr[T](
