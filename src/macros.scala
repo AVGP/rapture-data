@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Data Library                                                                         *
-* Version 1.0.5                                                                                *
+* Version 1.0.6                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -140,7 +140,7 @@ object Macros {
             Apply(
               Select(
                 Ident(definitions.PredefModule),
-                TermName("any2ArrowAssoc")
+                TermName("ArrowAssoc")
               ),
               List(
                 Literal(Constant(p.name.toString))
