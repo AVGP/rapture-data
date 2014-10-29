@@ -102,8 +102,11 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
 
     extract(parser.parse(txt).get, Vector())
 
-    val extracts = paths.map(data.$extract(_))
-    extracts.map(_.$normalize)
+    // Using a ListBuffer to work around SI-8947
+    val extractsBuffer = new collection.mutable.ListBuffer[D]
+    paths foreach { p => extractsBuffer += data.$extract(p) }
+    val extracts = extractsBuffer.toList
+    extracts.foreach(_.$normalize)
     val matchedArrayLengths = arrayLengths.forall { case (p, len) =>
       parser.ast.getArray(data.$extract(p).$normalize).length == len
     }
