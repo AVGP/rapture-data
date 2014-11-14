@@ -29,6 +29,8 @@ import scala.annotation._
 import language.experimental.macros
 import language.higherKinds
 
+import scala.util.Try
+
 object Extractor {
   implicit def floatExtractor[Data](implicit ext: Extractor[Double, Data]): Extractor[Float,
       Data] = ext.map(_.toFloat)
@@ -59,6 +61,13 @@ object Extractor {
       (implicit ext: Extractor[T, Data]): Extractor[Option[T], Data] =
     new BasicExtractor[Option[T], Data](x => try Some(x.$root.value: Any) map (v =>
         ext.construct(x.$wrap(v), x.$ast)) catch { case e: Exception => None }) {
+      override def suppressErrors = true
+    }
+
+  implicit def tryExtractor[T, Data <: DataType[Data, R] forSome { type R <: DataAst }]
+      (implicit ext: Extractor[T, Data]): Extractor[Try[T], Data] =
+    new BasicExtractor[Try[T], Data](x => Try(x.$root.value: Any) map (v =>
+        ext.construct(x.$wrap(v), x.$ast))) {
       override def suppressErrors = true
     }
 
