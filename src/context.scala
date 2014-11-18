@@ -22,6 +22,9 @@ package rapture.data
 
 import rapture.core._
 
+import language.experimental.macros
+import scala.reflect.macros._
+
 object patternMatching {
   implicit val exactArrays = new ArrayMatching { def checkLengths = true }
   implicit val exactObjects = new ObjectMatching { def checkSizes = true }
@@ -42,27 +45,56 @@ object ObjectMatching {
 trait ArrayMatching { def checkLengths: Boolean }
 trait ObjectMatching { def checkSizes: Boolean }
 
-class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
-    (companion: DataCompanion[Data, AstType], sc: StringContext,
-    parser: Parser[String, AstType]) {
+abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: DataAst] {
+ 
+  def parseSource(s: List[String]): Option[(Int, Int, String)]
 
-  def apply(exprs: ForcedConversion[Data]*)(implicit mode: Mode[ParseMethods]):
-      mode.Wrap[Data, ParseException] =
-    mode wrap {
-      val sb = new StringBuilder
-      val textParts = sc.parts.iterator
-      val expressions = exprs.iterator
-      sb.append(textParts.next())
-      while(textParts.hasNext) {
-        sb.append(companion.construct(VCell(expressions.next.value),
-            Vector())(parser.ast).toString)
-        sb.append(textParts.next)
-      }
-      companion.construct(VCell(parser.parse(sb.toString).get), Vector())(parser.ast)
+  def companion(c: Context): c.Expr[DataCompanion[Data, AstType]]
+
+  def contextMacro(c: Context)(exprs: c.Expr[ForcedConversion[Data]]*)(parser: c.Expr[Parser[String, AstType]]): c.Expr[Data] = {
+    import c.universe._
+    c.prefix.tree match {
+      case Select(Apply(Apply(_, List(Apply(_, rawParts))), _), _) =>
+        val ys = rawParts.to[List]
+        val text = rawParts map { case lit@Literal(Constant(part: String)) => part }
+        parseSource(text) foreach { case (n, offset, msg) =>
+          val oldPos = ys(n).asInstanceOf[Literal].pos
+          
+          val newPos = oldPos.withPoint(oldPos.startOrPoint + offset)
+          c.error(newPos, msg)
+        }
+        parseSource(text)
+        val listParts = c.Expr[List[String]](Apply(
+          Select(reify(List).tree, newTermName("apply")), 
+          rawParts
+        ))
+        val listExprs = c.Expr[List[ForcedConversion[Data]]](Apply(
+          Select(reify(List).tree, newTermName("apply")),
+          exprs.map(_.tree).to[List]
+        ))
+        val comp = companion(c)
+        reify {
+          val sb = new StringBuilder
+          val textParts = listParts.splice.iterator
+          val expressions: Iterator[ForcedConversion[_]] = listExprs.splice.iterator
+          sb.append(textParts.next())
+          while(textParts.hasNext) {
+            sb.append(comp.splice.construct(VCell(expressions.next.value),
+                Vector())(parser.splice.ast).toString)
+            sb.append(textParts.next)
+          }
+          comp.splice.construct(VCell(parser.splice.parse(sb.toString).get), Vector())(parser.splice.ast)
+        }
     }
+  }
+
+}
+
+class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
+    (companion: DataCompanion[Data, AstType], sc: StringContext) {
 
   def unapplySeq[D <: DataType[D, DataAst]](data: D)(implicit arrayMatching: ArrayMatching,
-      objectMatching: ObjectMatching): Option[Seq[DataType[D, DataAst]]] = try {
+      objectMatching: ObjectMatching, parser: Parser[String, AstType]): Option[Seq[DataType[D, DataAst]]] = try {
     val placeholder = Utils.uniqueNonSubstring(sc.parts.mkString)
     val PlaceholderNumber = (placeholder+"([0-9]+)"+placeholder).r
     val next = new Counter(0)
