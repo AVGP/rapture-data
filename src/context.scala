@@ -49,9 +49,9 @@ abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: D
  
   def parseSource(s: List[String]): Option[(Int, Int, String)]
 
-  def companion(c: Context): c.Expr[DataCompanion[Data, AstType]]
+  def companion(c: blackbox.Context): c.Expr[DataCompanion[Data, AstType]]
 
-  def contextMacro(c: Context)(exprs: c.Expr[ForcedConversion[Data]]*)(parser: c.Expr[Parser[String, AstType]]): c.Expr[Data] = {
+  def contextMacro(c: blackbox.Context)(exprs: c.Expr[ForcedConversion[Data]]*)(parser: c.Expr[Parser[String, AstType]]): c.Expr[Data] = {
     import c.universe._
     c.prefix.tree match {
       case Select(Apply(Apply(_, List(Apply(_, rawParts))), _), _) =>
@@ -65,11 +65,11 @@ abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: D
         }
         parseSource(text)
         val listParts = c.Expr[List[String]](Apply(
-          Select(reify(List).tree, newTermName("apply")), 
+          Select(reify(List).tree, TermName("apply")), 
           rawParts
         ))
         val listExprs = c.Expr[List[ForcedConversion[Data]]](Apply(
-          Select(reify(List).tree, newTermName("apply")),
+          Select(reify(List).tree, TermName("apply")),
           exprs.map(_.tree).to[List]
         ))
         val comp = companion(c)
