@@ -157,7 +157,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
     $wrap(merge($normalize, b.$root.value), Vector())
   }
 
-  def +(pv: (DPath => DPath, ForcedConversion[T])) = {
+  def +(pv: (DPath => DPath, ForcedConversion[T])): T = if(pv._2.nothing) $wrap($normalize) else {
     def add(path: List[Either[Int, String]], v: Any): Any = path match {
       case Nil => v
       case Right(next) :: list => $ast.fromObject(Map(next -> add(list, v)))
@@ -176,17 +176,20 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
         $root.value = newVal
       case Left(idx) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)), idx, newVal)
+        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)),
+            idx, newVal)
         if(jb ne newJb) $updateParents(init, newJb)
       case Right(key) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())), key, newVal)
+        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())),
+            key, newVal)
         if(jb ne newJb) $updateParents(init, newJb)
     }
 
   /** Updates the element `key` of the JSON object with the value `v` */
   def updateDynamic(key: String)(v: ForcedConversion[T]): Unit =
-    $updateParents($path, $ast.setObjectValue(Try($normalize).getOrElse($ast.fromObject(Map())), key, v.value))
+    if(!v.nothing) $updateParents($path,
+        $ast.setObjectValue(Try($normalize).getOrElse($ast.fromObject(Map())), key, v.value))
 
   /** Updates the `i`th element of the JSON array with the value `v` */
   def update[T2](i: Int, v: T2)(implicit ser: Serializer[T2, T]): Unit =
@@ -204,9 +207,16 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
   }
 }
 
-object ForcedConversion {
-  implicit def forceConversion[T, D](t: T)(implicit ser: Serializer[T, D]) =
-    ForcedConversion[D](ser.serialize(t))
+object ForcedConversion extends LowPriorityForcedConversion {
+  implicit def forceOptConversion[T, D](opt: Option[T])(implicit ser: Serializer[T, D]) =
+    opt.map(t => ForcedConversion[D](ser.serialize(t), false)) getOrElse
+        ForcedConversion[D](null, true)
 }
-case class ForcedConversion[-D](var value: Any)
+
+trait LowPriorityForcedConversion {
+  implicit def forceConversion[T, D](t: T)(implicit ser: Serializer[T, D]) =
+    ForcedConversion[D](ser.serialize(t), false)
+}
+
+case class ForcedConversion[-D](value: Any, nothing: Boolean)
 
