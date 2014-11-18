@@ -1,6 +1,6 @@
 object project extends ProjectSettings {
   def scalaVersion = "2.11.4"
-  def version = "1.0.6"
+  def version = "1.0.7"
   def name = "data"
   def description = "Rapture Data provides a basis for working with structured data, such as JSON and XML"
   
