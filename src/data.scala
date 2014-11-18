@@ -157,7 +157,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
     $wrap(merge($normalize, b.$root.value), Vector())
   }
 
-  def +(pv: (DPath => DPath, ForcedConversion[T])) = if(pv._2.nothing) this else {
+  def +(pv: (DPath => DPath, ForcedConversion[T])): T = if(pv._2.nothing) $wrap($normalize) else {
     def add(path: List[Either[Int, String]], v: Any): Any = path match {
       case Nil => v
       case Right(next) :: list => $ast.fromObject(Map(next -> add(list, v)))
