@@ -54,7 +54,7 @@ object Macros {
           appliedType(
             extractor,
             List(p.returnType, weakTypeOf[Data])
-          )
+          ), false, false
         )
       )
       
