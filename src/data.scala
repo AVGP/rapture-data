@@ -43,8 +43,8 @@ trait DataCompanion[+Type <: DataType[Type, DataAst], -AstType <: DataAst] {
 
   def construct(any: VCell, path: Vector[Either[Int, String]])(implicit ast: AstType): Type
 
-  def parse[Source, R <: AstType](s: Source)(implicit mode: Mode[ParseMethods],
-      parser: Parser[Source, R]): mode.Wrap[Type, ParseException] = mode wrap {
+  def parse[Source](s: Source)(implicit mode: Mode[ParseMethods],
+      parser: Parser[Source, AstType]): mode.Wrap[Type, ParseException] = mode wrap {
     construct(try VCell(parser.parse(s).get) catch {
       case e: NoSuchElementException => throw new ParseException(s.toString)
     }, Vector())(parser.ast)
