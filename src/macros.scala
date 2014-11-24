@@ -29,7 +29,9 @@ import language.experimental.macros
 import language.higherKinds
 
 object Macros {
- 
+
+  val emittedWarnings = new collection.mutable.HashSet[String]
+
   def extractorMacro[T: c.WeakTypeTag, Data: c.WeakTypeTag](c: Context): c.Expr[Extractor[T,
       Data]] = {
     import c.universe._
@@ -37,6 +39,7 @@ object Macros {
     require(weakTypeOf[T].typeSymbol.asClass.isCaseClass)
     val extractor = typeOf[Extractor[_, _]].typeSymbol.asType.toTypeConstructor
 
+    val implicitSearchFailures = collection.mutable.ListMap[String, List[String]]().withDefault(_ => Nil)
     val params = weakTypeOf[T].declarations collect {
       case m: MethodSymbol if m.isCaseAccessor => m.asMethod
     } map { p =>
@@ -50,14 +53,16 @@ object Macros {
             List(p.returnType, weakTypeOf[Data])
           )
         ),
-        c.inferImplicitValue(
+        try c.inferImplicitValue(
           appliedType(
             extractor,
             List(p.returnType, weakTypeOf[Data])
           ), false, false
-        )
+        ) catch { case e: Exception =>
+          implicitSearchFailures(p.returnType.toString) ::= p.name.toString
+          null
+        }
       )
-      
       
       val paramValue = c.Expr[Any](Apply(
         Select(
@@ -106,6 +111,26 @@ object Macros {
       ))
     }
 
+    if(!implicitSearchFailures.isEmpty) {
+      val paramStrings = implicitSearchFailures map {
+        case (t, p1 :: Nil) => s"parameter `$p1' of type $t"
+        case (t, p1 :: ps) => s"parameters ${ps.map(v => s"`$v'").mkString(", ")} and `$p1' of type $t"
+      }
+      val errorString = paramStrings.to[List].reverse match {
+        case t1 :: Nil => t1
+        case t1 :: ts => s"${ts.mkString(", ")} and $t1"
+      }
+      val plural = if(implicitSearchFailures.flatMap(_._2).size > 1) s"${weakTypeOf[Data].typeSymbol.name} extractors" else s"a ${weakTypeOf[Data].typeSymbol.name} extractor"
+      
+      val err = s"Could not generate a ${weakTypeOf[Data].typeSymbol.name} extractor for case class ${weakTypeOf[T].typeSymbol.name} because $plural for $errorString could not be found"
+      if(!emittedWarnings.contains(err)) {
+        emittedWarnings += err
+        c.info(NoPosition, err, true)
+      }
+    }
+
+    require(implicitSearchFailures.isEmpty)
+      
     val construction = c.Expr[T](
       Apply(
         Select(
