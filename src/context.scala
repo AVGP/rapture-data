@@ -46,7 +46,16 @@ trait ArrayMatching { def checkLengths: Boolean }
 trait ObjectMatching { def checkSizes: Boolean }
 
 abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: DataAst] {
- 
+
+  protected def uniqueNonSubstring(s: String) = {
+    var cur, m = 0
+    s foreach { c =>
+      cur = if(c == '_') cur + 1 else 0
+      m = m max cur
+    }
+    "_"*(m + 1)
+  }
+
   def parseSource(s: List[String]): Option[(Int, Int, String)]
 
   def companion(c: Context): c.Expr[DataCompanion[Data, AstType]]
@@ -95,7 +104,7 @@ class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
 
   def unapplySeq[D <: DataType[D, DataAst]](data: D)(implicit arrayMatching: ArrayMatching,
       objectMatching: ObjectMatching, parser: Parser[String, AstType]): Option[Seq[DataType[D, DataAst]]] = try {
-    val placeholder = Utils.uniqueNonSubstring(sc.parts.mkString)
+    val placeholder = uniqueNonSubstring(sc.parts.mkString)
     val PlaceholderNumber = (placeholder+"([0-9]+)"+placeholder).r
     val next = new Counter(0)
     val txt = sc.parts.reduceLeft(_ + s""""${placeholder}${next()}${placeholder}" """ + _)
