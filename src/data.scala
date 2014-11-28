@@ -220,3 +220,5 @@ trait LowPriorityForcedConversion {
 
 case class ForcedConversion[-D](value: Any, nothing: Boolean)
 
+case class ParseException(source: String, line: Option[Int] = None, column: Option[Int] = None)
+    extends Exception { override def toString = "Failed to parse source" }
