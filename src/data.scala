@@ -104,8 +104,8 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
       case (j, Vector()) => j: Any
       case (j, t :+ e) =>
         fn(({
-          if(e.map(x => $ast.isArray(j), x => $ast.isObject(j))) {
-            try e.map($ast.dereferenceArray(j, _), $ast.dereferenceObject(j, _)) catch {
+          if(e.bimap(x => $ast.isArray(j), x => $ast.isObject(j))) {
+            try e.bimap($ast.dereferenceArray(j, _), $ast.dereferenceObject(j, _)) catch {
               case TypeMismatchException(f, e, _) =>
                 TypeMismatchException(f, e, $path.drop(t.length))
               case e: Exception =>
@@ -114,7 +114,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
             }
           } else throw TypeMismatchException(
             if($ast.isArray(j)) DataTypes.Array else DataTypes.Object,
-                e.map(l => DataTypes.Array, r => DataTypes.Object),
+                e.bimap(l => DataTypes.Array, r => DataTypes.Object),
             $path.drop(t.length)
           )
         }, t))
@@ -122,7 +122,7 @@ trait DataType[+T <: DataType[T, AstType], +AstType <: DataAst] {
 
   /** Assumes the Json object is wrapping a `T`, and casts (intelligently) to that type. */
   def as[S](implicit ext: Extractor[S, T], mode: Mode[ExtractionMethods]):
-      mode.Wrap[S, DataGetException] = mode wrap {
+      mode.Wrap[S, SingleDataGetException] = mode wrap {
     try ext.construct($wrap($normalize), $ast) catch {
       case TypeMismatchException(f, e, _) => throw TypeMismatchException(f, e, $path)
       case e: MissingValueException => throw e
@@ -176,14 +176,24 @@ trait MutableDataType[+T <: DataType[T, AstType], AstType <: MutableDataAst]
         $root.value = newVal
       case Left(idx) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)),
-            idx, newVal)
-        if(jb ne newJb) $updateParents(init, newJb)
+        val newJb = $ast.setArrayValue(Try(jb.$normalize).getOrElse($ast.fromArray(Nil)), idx, newVal)
+        if(jb match {
+          case jb: AnyRef => newJb match {
+            case newJb: AnyRef => jb ne newJb
+            case _ => false
+          }
+          case jb => jb == newJb
+        }) $updateParents(init, newJb)
       case Right(key) +: init =>
         val jb = $deref(init)
-        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())),
-            key, newVal)
-        if(jb ne newJb) $updateParents(init, newJb)
+        val newJb = $ast.setObjectValue(Try(jb.$normalize).getOrElse($ast.fromObject(Map())), key, newVal)
+        if(jb match {
+          case jb: AnyRef => newJb match {
+            case newJb: AnyRef => jb ne newJb
+            case _ => false
+          }
+          case jb => jb == newJb
+        }) $updateParents(init, newJb)
     }
 
   /** Updates the element `key` of the JSON object with the value `v` */

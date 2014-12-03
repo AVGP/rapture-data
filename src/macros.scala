@@ -232,7 +232,9 @@ object Macros {
     } else throw new Exception()
 
     reify(new Serializer[T, Data] {
-      def serialize(t: T): Any = ast.splice.fromObject(construction.splice)
+      def serialize(t: T): Any = ast.splice.fromObject(construction.splice.filterNot { v =>
+        ast.splice.isNull(v._2)
+      })
     })
   }
 }

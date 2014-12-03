@@ -47,15 +47,6 @@ trait ObjectMatching { def checkSizes: Boolean }
 
 abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: DataAst] {
 
-  protected def uniqueNonSubstring(s: String) = {
-    var cur, m = 0
-    s foreach { c =>
-      cur = if(c == '_') cur + 1 else 0
-      m = m max cur
-    }
-    "_"*(m + 1)
-  }
-
   def parseSource(s: List[String]): Option[(Int, Int, String)]
 
   def companion(c: Context): c.Expr[DataCompanion[Data, AstType]]
@@ -102,12 +93,21 @@ abstract class DataContextMacros[+Data <: DataType[Data, DataAst], -AstType <: D
 class DataContext[+Data <: DataType[Data, DataAst], -AstType <: DataAst]
     (companion: DataCompanion[Data, AstType], sc: StringContext) {
 
+  protected def uniqueNonSubstring(s: String) = {
+    var cur, m = 0
+    s foreach { c =>
+      cur = if(c == '_') cur + 1 else 0
+      m = m max cur
+    }
+    "_"*(m + 1)
+  }
+
   def unapplySeq[D <: DataType[D, DataAst]](data: D)(implicit arrayMatching: ArrayMatching,
       objectMatching: ObjectMatching, parser: Parser[String, AstType]): Option[Seq[DataType[D, DataAst]]] = try {
     val placeholder = uniqueNonSubstring(sc.parts.mkString)
     val PlaceholderNumber = (placeholder+"([0-9]+)"+placeholder).r
-    val next = new Counter(0)
-    val txt = sc.parts.reduceLeft(_ + s""""${placeholder}${next()}${placeholder}" """ + _)
+    val count = Iterator.from(0)
+    val txt = sc.parts.reduceLeft(_ + s""""${placeholder}${count.next()}${placeholder}" """ + _)
     
     val paths: Array[Vector[Either[Int, String]]] =
       Array.fill[Vector[Either[Int, String]]](sc.parts.length - 1)(Vector())

@@ -27,14 +27,43 @@ object DataGetException {
   } mkString ""
 }
 
-sealed class DataGetException(msg: String) extends RuntimeException(msg)
+sealed abstract class DataGetException(msg: String) extends RuntimeException(msg) {
+  def |+|(e: DataGetException): MultiDataGetException
+}
+
+sealed abstract class SingleDataGetException(msg: String) extends DataGetException(msg) {
+  def path: Vector[Either[Int, String]]
+  
+  def |+|(e: DataGetException): MultiDataGetException = e match {
+    case MultiDataGetException(es@ _*) =>
+      MultiDataGetException(this +: es: _*)
+    case e@TypeMismatchException(_, _, _) =>
+      MultiDataGetException(this, e)
+    case e@MissingValueException(_) =>
+      MultiDataGetException(this, e)
+  }
+}
 
 case class TypeMismatchException(foundType: DataTypes.DataType,
     expectedType: DataTypes.DataType, path: Vector[Either[Int, String]]) extends
-    DataGetException(s"Type mismatch: Expected ${expectedType.name} but found "+
+    SingleDataGetException(s"Type mismatch: Expected ${expectedType.name} but found "+
     s"${foundType.name} at <value>${DataGetException.stringifyPath(path)}")
 
 case class MissingValueException(path: Vector[Either[Int, String]])
-  extends DataGetException(s"Missing value: <value>${DataGetException.stringifyPath(path)}")
+    extends SingleDataGetException(s"Missing value: <value>${DataGetException.stringifyPath(path)}")
 
+case class MultiDataGetException(exceptions: SingleDataGetException*) extends DataGetException({
+  val msg = exceptions map { e => DataGetException.stringifyPath(e.path) } mkString ", "
+  s"Failure to extract elements: $msg."
+}) {
 
+  def |+|(e: DataGetException): MultiDataGetException = e match {
+    case MultiDataGetException(es@ _*) =>
+      MultiDataGetException(exceptions ++ es: _*)
+    case e@TypeMismatchException(_, _, _) =>
+      MultiDataGetException(exceptions :+ e: _*)
+    case e@MissingValueException(_) =>
+      MultiDataGetException(exceptions :+ e: _*)
+  }
+
+}

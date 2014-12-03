@@ -61,7 +61,9 @@ trait DataAst {
   
   /** Tests if the element represents an `Array` */
   def isArray(any: Any): Boolean
-  
+ 
+  def isNull(any: Any): Boolean
+
   /** Extracts a JSON object as a `Map[String, Any]` from the parsed JSON. */
   def getObject(obj: Any): Map[String, Any]
 
